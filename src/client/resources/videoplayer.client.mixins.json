@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "com.github.squi2rel.vp.mixin.client",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "MinecraftClientMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "mixins": [
+  ]
+}

@@ -1,0 +1,59 @@
+package com.github.squi2rel.vp;
+
+import com.github.squi2rel.vp.network.ServerPacketHandler;
+import com.github.squi2rel.vp.network.VideoPayload;
+import com.github.squi2rel.vp.provider.VideoProviders;
+import com.github.squi2rel.vp.video.StreamListener;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import io.netty.buffer.Unpooled;
+import net.fabricmc.api.ModInitializer;
+
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.server.command.CommandManager;
+import net.minecraft.text.Text;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.nio.file.Path;
+
+public class VideoPlayerMain implements ModInitializer {
+	public static final String MOD_ID = "videoplayer";
+	public static final String version = FabricLoader.getInstance().getModContainer(MOD_ID).orElseThrow().getMetadata().getVersion().toString();
+
+	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+
+	public static Path libDir;
+
+	@SuppressWarnings("resource")
+    @Override
+	public void onInitialize() {
+		Path gameDir = FabricLoader.getInstance().getGameDir();
+		libDir = gameDir.resolve("mods").resolve("VideoPlayer-vlc");
+		if (!libDir.toFile().exists()) throw new RuntimeException("Could not find vlc directory");
+		StreamListener.load();
+		VideoProviders.register();
+		VideoPayload.register();
+		ServerLifecycleEvents.SERVER_STARTED.register(DataHolder::load);
+		ServerLifecycleEvents.SERVER_STOPPING.register(DataHolder::stop);
+		ServerTickEvents.START_WORLD_TICK.register(s -> DataHolder.update(s.getServer()));
+		ServerPlayConnectionEvents.JOIN.register((e, p, s) -> DataHolder.playerJoin(e.player));
+		ServerPlayConnectionEvents.DISCONNECT.register((e, s) -> DataHolder.playerLeave(e.player.getUuid()));
+		ServerPlayNetworking.registerGlobalReceiver(VideoPayload.ID, (p, c) -> c.server().execute(() -> {
+			try {
+				ServerPacketHandler.handle(c.player(), Unpooled.wrappedBuffer(p.data()));
+			} catch (Exception e) {
+				c.player().networkHandler.disconnect(Text.of(e.toString()));
+			}
+		}));
+		CommandRegistrationCallback.EVENT.register((d, c, e) -> d.register(CommandManager.literal("").then(CommandManager.argument("command", StringArgumentType.greedyString()).executes(s -> {
+            if (!s.getSource().isExecutedByPlayer()) return 0;
+            ServerPacketHandler.sendTo(s.getSource().getPlayer(), ServerPacketHandler.execute(s.getArgument("command", String.class)));
+            return 1;
+        }))));
+	}
+}
