@@ -48,6 +48,7 @@ public class VideoPlayerClient implements ClientModInitializer {
     public static boolean updated = false;
     private static final TouchHandler touchHandler = new TouchHandler();
     private static ClientVideoScreen currentLooking, currentScreen;
+    private static boolean isInArea = false;
     private static BossBar bossBar = null;
     private static boolean bossBarAdded = false;
 
@@ -295,7 +296,11 @@ public class VideoPlayerClient implements ClientModInitializer {
             return true;
         }
         if (checkScreen && currentScreen == null) {
-            s.getSource().sendFeedback(Text.literal("当前没有在观影区内").formatted(Formatting.RED));
+            if (isInArea) {
+                s.getSource().sendFeedback(Text.literal("当前观影区没有主屏幕").formatted(Formatting.RED));
+            } else {
+                s.getSource().sendFeedback(Text.literal("当前没有在观影区内").formatted(Formatting.RED));
+            }
             return true;
         }
         return false;
@@ -372,6 +377,7 @@ public class VideoPlayerClient implements ClientModInitializer {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client == null) return;
         if (players.isEmpty()) {
+            isInArea = false;
             currentLooking = null;
             currentScreen = null;
             touchHandler.handle(null);
@@ -381,6 +387,7 @@ public class VideoPlayerClient implements ClientModInitializer {
         currentScreen = null;
         for (ClientVideoArea area : areas.values()) {
             if (!area.loaded) continue;
+            isInArea = true;
             for (VideoScreen screen : area.screens) {
                 if (screen instanceof ClientVideoScreen s) {
                     currentScreen = s;
