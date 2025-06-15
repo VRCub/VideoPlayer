@@ -78,6 +78,18 @@ public class VideoPlayerClient implements ClientModInitializer {
         return builder.buildFuture();
     };
 
+    private static final SuggestionProvider<FabricClientCommandSource> SUGGEST_REAL_SCREENS = (context, builder) -> {
+        ClientVideoArea area = areas.get(context.getArgument("area", String.class));
+        if (area == null) return Suggestions.empty();
+        for (VideoScreen screen : area.screens) {
+            if (!screen.source.isEmpty()) continue;
+            if (screen.name.startsWith(builder.getRemaining())) {
+                builder.suggest(screen.name);
+            }
+        }
+        return builder.buildFuture();
+    };
+
     @Override
     public void onInitializeClient() {
         VlcDecoder.load();
@@ -85,7 +97,7 @@ public class VideoPlayerClient implements ClientModInitializer {
         ClientPlayConnectionEvents.DISCONNECT.register((h, c) -> c.execute(() -> { // TODO why don't works
             connected = false;
             for (ClientVideoArea area : areas.values()) {
-                area.unload();
+                area.remove();
             }
             areas.clear();
             for (IVideoPlayer player : players) {
@@ -180,7 +192,7 @@ public class VideoPlayerClient implements ClientModInitializer {
                         .then(ClientCommandManager.argument("x4", FloatArgumentType.floatArg())
                         .then(ClientCommandManager.argument("y4", FloatArgumentType.floatArg())
                         .then(ClientCommandManager.argument("z4", FloatArgumentType.floatArg())
-                        .then(ClientCommandManager.argument("source", StringArgumentType.string()).suggests(SUGGEST_SCREENS)
+                        .then(ClientCommandManager.argument("source", StringArgumentType.string()).suggests(SUGGEST_REAL_SCREENS)
                                 .executes(s -> {
                                     VideoArea area = getArea(s);
                                     if (area == null) return 0;
@@ -356,6 +368,7 @@ public class VideoPlayerClient implements ClientModInitializer {
         if (client == null) return;
         if (players.isEmpty()) {
             currentLooking = null;
+            currentScreen = null;
             touchHandler.handle(null);
             return;
         }
