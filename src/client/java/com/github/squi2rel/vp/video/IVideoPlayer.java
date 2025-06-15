@@ -46,11 +46,11 @@ public interface IVideoPlayer {
     default void draw(Matrix4f mat, int id, Vector3f p1, Vector3f p2, Vector3f p3, Vector3f p4) {
         int old = RenderSystem.getShaderTexture(0);
         RenderSystem.setShaderTexture(0, id);
-        BufferBuilder bufferBuilder = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
-        bufferBuilder.vertex(mat, p1.x, p1.y, p1.z).texture(0, 0).color(0xFFFFFFFF);
-        bufferBuilder.vertex(mat, p2.x, p2.y, p2.z).texture(0, 1).color(0xFFFFFFFF);
-        bufferBuilder.vertex(mat, p3.x, p3.y, p3.z).texture(1, 1).color(0xFFFFFFFF);
-        bufferBuilder.vertex(mat, p4.x, p4.y, p4.z).texture(1, 0).color(0xFFFFFFFF);
+        BufferBuilder bufferBuilder = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE);
+        bufferBuilder.vertex(mat, p1.x, p1.y, p1.z).texture(0, 0);
+        bufferBuilder.vertex(mat, p2.x, p2.y, p2.z).texture(0, 1);
+        bufferBuilder.vertex(mat, p3.x, p3.y, p3.z).texture(1, 1);
+        bufferBuilder.vertex(mat, p4.x, p4.y, p4.z).texture(1, 0);
         BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
         RenderSystem.setShaderTexture(0, old);
     }

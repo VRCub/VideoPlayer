@@ -15,7 +15,6 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
@@ -58,6 +57,8 @@ public class VideoPlayerClient implements ClientModInitializer {
     public static float remoteControlRange = 64;
     public static float noControlRange = 16;
 
+    public static Runnable disconnectHandler = () -> {};
+
     private static final SuggestionProvider<FabricClientCommandSource> SUGGEST_AREAS = (context, builder) -> {
         for (ClientVideoArea a : areas.values()) {
             if (a.name.startsWith(builder.getRemaining())) {
@@ -94,7 +95,7 @@ public class VideoPlayerClient implements ClientModInitializer {
     public void onInitializeClient() {
         VlcDecoder.load();
         VideoProviders.register();
-        ClientPlayConnectionEvents.DISCONNECT.register((h, c) -> c.execute(() -> { // TODO why don't works
+        disconnectHandler = () -> MinecraftClient.getInstance().execute(() -> {
             connected = false;
             for (ClientVideoArea area : areas.values()) {
                 area.remove();
@@ -105,8 +106,8 @@ public class VideoPlayerClient implements ClientModInitializer {
             }
             players.clear();
             currentLooking = null;
-        }));
-        WorldRenderEvents.AFTER_TRANSLUCENT.register(this::render);
+        });
+        WorldRenderEvents.LAST.register(this::render);
         ClientTickEvents.START_CLIENT_TICK.register(c -> updated = false);
         ClientPlayNetworking.registerGlobalReceiver(VideoPayload.ID, (p, c) -> MinecraftClient.getInstance().execute(() -> ClientPacketHandler.handle(Unpooled.wrappedBuffer(p.data()))));
         ClientCommandRegistrationCallback.EVENT.register((d, c) -> d.register(ClientCommandManager.literal("vlc")
@@ -305,6 +306,28 @@ public class VideoPlayerClient implements ClientModInitializer {
         Profilers.get().push("checkInteract");
         checkInteract(ctx);
         Profilers.get().swap("updateBossBar");
+        updateBossBar();
+        Profilers.get().swap("render");
+        MatrixStack matrices = ctx.matrixStack();
+        Vec3d camera = ctx.camera().getPos();
+        matrices.push();
+        matrices.translate(-camera.x, -camera.y, -camera.z);
+        Matrix4f mat = matrices.peek().getPositionMatrix();
+        RenderSystem.setShader(ShaderProgramKeys.POSITION_TEX);
+        RenderSystem.enableDepthTest();
+        RenderSystem.depthFunc(GL11.GL_LESS);
+        RenderSystem.disableCull();
+        for (IVideoPlayer player : players) {
+            player.draw(mat);
+        }
+        matrices.pop();
+        RenderSystem.enableCull();
+        RenderSystem.disableDepthTest();
+        Profilers.get().pop();
+        Profilers.get().pop();
+    }
+
+    private static void updateBossBar() {
         if (currentLooking != null) {
             ClientPlayNetworkHandler handler = MinecraftClient.getInstance().getNetworkHandler();
             if (!bossBarAdded) {
@@ -343,24 +366,6 @@ public class VideoPlayerClient implements ClientModInitializer {
             }
             updated = true;
         }
-        Profilers.get().swap("render");
-        MatrixStack matrices = ctx.matrixStack();
-        Vec3d camera = ctx.camera().getPos();
-        matrices.push();
-        matrices.translate(-camera.x, -camera.y, -camera.z);
-        Matrix4f mat = matrices.peek().getPositionMatrix();
-        RenderSystem.setShader(ShaderProgramKeys.POSITION_TEX_COLOR);
-        RenderSystem.enableDepthTest();
-        RenderSystem.depthFunc(GL11.GL_LESS);
-        RenderSystem.disableCull();
-        for (IVideoPlayer player : players) {
-            player.draw(mat);
-        }
-        matrices.pop();
-        RenderSystem.enableCull();
-        RenderSystem.disableDepthTest();
-        Profilers.get().pop();
-        Profilers.get().pop();
     }
 
     private void checkInteract(WorldRenderContext ctx) {
