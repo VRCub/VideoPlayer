@@ -96,6 +96,7 @@ public class VideoArea {
     public VideoScreen removeScreen(String name) {
         VideoScreen screen = getScreen(name);
         if (screen != null) {
+            screen.remove();
             screens.remove(screen);
             return screen;
         }
