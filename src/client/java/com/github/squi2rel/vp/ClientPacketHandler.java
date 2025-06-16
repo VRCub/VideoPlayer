@@ -19,6 +19,7 @@ import org.joml.Vector3f;
 import java.util.Objects;
 
 import static com.github.squi2rel.vp.VideoPlayerClient.areas;
+import static com.github.squi2rel.vp.network.ByteBufUtils.writeString;
 import static com.github.squi2rel.vp.video.VideoScreen.MAX_NAME_LENGTH;
 import static com.github.squi2rel.vp.network.PacketID.*;
 import static com.github.squi2rel.vp.VideoPlayerMain.LOGGER;
@@ -129,22 +130,22 @@ public class ClientPacketHandler {
 
     public static void config(String version) {
         ByteBuf buf = create(CONFIG);
-        ByteBufUtils.writeString(buf, version);
+        writeString(buf, version);
         send(toByteArray(buf));
     }
 
     public static void request(VideoScreen screen, String path) {
         ByteBuf buf = create(REQUEST);
-        ByteBufUtils.writeString(buf, screen.area.name);
-        ByteBufUtils.writeString(buf, screen.name);
-        ByteBufUtils.writeString(buf, path);
+        writeString(buf, screen.area.name);
+        writeString(buf, screen.name);
+        writeString(buf, path);
         send(toByteArray(buf));
     }
 
     public static void sync(VideoScreen screen) {
         ByteBuf buf = create(SYNC);
-        ByteBufUtils.writeString(buf, screen.area.name);
-        ByteBufUtils.writeString(buf, screen.name);
+        writeString(buf, screen.area.name);
+        writeString(buf, screen.name);
         send(toByteArray(buf));
     }
 
@@ -152,43 +153,50 @@ public class ClientPacketHandler {
         ByteBuf buf = create(CREATE_AREA);
         ByteBufUtils.writeVec3(buf, p1);
         ByteBufUtils.writeVec3(buf, p2);
-        ByteBufUtils.writeString(buf, name);
+        writeString(buf, name);
         send(toByteArray(buf));
     }
 
     public static void removeArea(String area) {
         ByteBuf buf = create(REMOVE_AREA);
-        ByteBufUtils.writeString(buf, area);
+        writeString(buf, area);
         send(toByteArray(buf));
     }
 
     public static void createScreen(VideoScreen screen) {
         ByteBuf buf = create(CREATE_SCREEN);
-        ByteBufUtils.writeString(buf, screen.area.name);
+        writeString(buf, screen.area.name);
         VideoScreen.write(buf, screen);
         send(toByteArray(buf));
     }
 
     public static void removeScreen(VideoScreen screen) {
         ByteBuf buf = create(REMOVE_SCREEN);
-        ByteBufUtils.writeString(buf, screen.area.name);
-        ByteBufUtils.writeString(buf, screen.name);
+        writeString(buf, screen.area.name);
+        writeString(buf, screen.name);
         send(toByteArray(buf));
     }
 
     public static void skip(VideoScreen screen, boolean force) {
         ByteBuf buf = create(SKIP);
-        ByteBufUtils.writeString(buf, screen.area.name);
-        ByteBufUtils.writeString(buf, screen.name);
+        writeString(buf, screen.area.name);
+        writeString(buf, screen.name);
         buf.writeBoolean(force);
         send(toByteArray(buf));
     }
 
     public static void skipPercent(VideoScreen screen, float percent) {
         ByteBuf buf = create(SKIP_PERCENT);
-        ByteBufUtils.writeString(buf, screen.area.name);
-        ByteBufUtils.writeString(buf, screen.name);
+        writeString(buf, screen.area.name);
+        writeString(buf, screen.name);
         buf.writeFloat(percent);
         send(toByteArray(buf));
+    }
+
+    public static void idlePlay(VideoScreen screen, String url) {
+        ByteBuf buf = create(IDLE_PLAY);
+        writeString(buf, screen.area.name);
+        writeString(buf, screen.name);
+        writeString(buf, url);
     }
 }

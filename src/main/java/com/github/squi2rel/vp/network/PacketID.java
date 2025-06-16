@@ -14,5 +14,6 @@ public class PacketID {
     UPDATE_PLAYLIST = 9,
     SKIP = 10,
     SKIP_PERCENT = 11,
-    EXECUTE = 12;
+    EXECUTE = 12,
+    IDLE_PLAY = 13;
 }

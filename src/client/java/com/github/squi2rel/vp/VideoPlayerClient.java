@@ -254,10 +254,7 @@ public class VideoPlayerClient implements ClientModInitializer {
                 )
                 .then(ClientCommandManager.literal("list")
                         .executes(s -> {
-                            if (currentScreen == null) {
-                                s.getSource().sendFeedback(Text.of("当前没有在观影区内"));
-                                return 0;
-                            }
+                            if (checkInvalid(s, true)) return 0;
                             s.getSource().sendFeedback(Text.literal(currentScreen.infos.stream()
                                     .map(i -> String.format("%s 请求玩家: %s", i.name(), i.playerName()))
                                     .collect(Collectors.joining("\n"))
@@ -267,13 +264,18 @@ public class VideoPlayerClient implements ClientModInitializer {
                 )
                 .then(ClientCommandManager.literal("sync")
                         .executes(s -> {
-                            if (currentScreen == null) {
-                                s.getSource().sendFeedback(Text.literal("当前没有在观影区内").formatted(Formatting.RED));
-                                return 0;
-                            }
+                            if (checkInvalid(s, true)) return 0;
                             ClientPacketHandler.sync(currentScreen);
                             return 1;
                         })
+                )
+                .then(ClientCommandManager.literal("idleplay")
+                        .then(ClientCommandManager.argument("url", StringArgumentType.greedyString())
+                                .executes(s -> {
+                                    if (checkInvalid(s, true)) return 0;
+                                    ClientPacketHandler.idlePlay(currentScreen, s.getArgument("url", String.class));
+                                    return 1;
+                                }))
                 )
         ));
         bossBar = new ClientBossBar(UUID.randomUUID(), Text.of(""), 0, BossBar.Color.WHITE, BossBar.Style.PROGRESS, false, false, false);

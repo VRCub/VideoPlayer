@@ -18,8 +18,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 import static com.github.squi2rel.vp.VideoPlayerMain.LOGGER;
+import static com.github.squi2rel.vp.network.ByteBufUtils.readString;
+import static com.github.squi2rel.vp.network.ByteBufUtils.writeString;
 import static com.github.squi2rel.vp.video.VideoScreen.MAX_NAME_LENGTH;
 import static com.github.squi2rel.vp.network.PacketID.*;
 
@@ -36,40 +39,17 @@ public class ServerPacketHandler {
             }
             case REQUEST -> {
                 VideoArea area = getArea(player, readName(buf));
-                String name = readName(buf);
+                if (area == null) return;
+                VideoScreen screen = area.getScreen(readName(buf));
+                if (screen == null) return;
                 String url = ByteBufUtils.readString(buf, 256);
-                if (area == null) break;
-                VideoScreen screen = area.getScreen(name);
-                CompletableFuture<VideoInfo> video = VideoProviders.from(url, new PlayerProviderSource(player));
-                if (video == null) {
-                    player.sendMessage(Text.of("无法解析视频源"));
-                    break;
-                }
-                CompletableFuture.supplyAsync(() -> {
-                    try {
-                        LOGGER.info("start fetch");
-                        return video.get();
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                }).thenAccept(v -> {
-                    try {
-                        if (v == null) {
-                            player.sendMessage(Text.of("无法解析视频源"));
-                            return;
-                        }
-                        screen.addInfo(v);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                });
+                if (fetchSource(player, url, screen::addInfo)) return;
             }
             case SYNC -> {
                 VideoArea area = getArea(player, readName(buf));
-                String name = readName(buf);
-                if (area == null) break;
-                VideoScreen screen = area.getScreen(name);
-                if (screen == null || screen.currentPlaying() == null) break;
+                if (area == null) return;
+                VideoScreen screen = area.getScreen(readName(buf));
+                if (screen == null || screen.currentPlaying() == null) return;
                 sendTo(player, sync(screen, screen.getProgress()));
             }
             case CREATE_AREA -> {
@@ -83,7 +63,7 @@ public class ServerPacketHandler {
             case REMOVE_AREA -> {
                 // TODO check permission
                 VideoArea area = getArea(player, readName(buf));
-                if (area == null) break;
+                if (area == null) return;
                 DataHolder.lock();
                 DataHolder.areas.get(area.dim).remove(area.name).remove();
                 if (area.hasPlayer()) {
@@ -96,7 +76,7 @@ public class ServerPacketHandler {
             case CREATE_SCREEN -> {
                 // TODO check permission
                 VideoArea area = getArea(player, readName(buf));
-                if (area == null) break;
+                if (area == null) return;
                 VideoScreen screen = VideoScreen.read(buf, area);
                 screen.initServer(player.getServer());
                 DataHolder.lock();
@@ -111,10 +91,9 @@ public class ServerPacketHandler {
             case REMOVE_SCREEN -> {
                 // TODO check permission
                 VideoArea area = getArea(player, readName(buf));
-                String name = readName(buf);
-                if (area == null) break;
+                if (area == null) return;
                 DataHolder.lock();
-                VideoScreen removed = area.removeScreen(name);
+                VideoScreen removed = area.removeScreen(readName(buf));
                 if (removed != null && area.hasPlayer()) {
                     byte[] data = removeScreen(removed);
                     PlayerManager pm = Objects.requireNonNull(player.getServer()).getPlayerManager();
@@ -124,32 +103,65 @@ public class ServerPacketHandler {
             }
             case SKIP -> {
                 VideoArea area = getArea(player, readName(buf));
-                String name = readName(buf);
-                if (area == null) break;
-                VideoScreen screen = area.getScreen(name);
-                if (screen == null) break;
+                if (area == null) return;
+                VideoScreen screen = area.getScreen(readName(buf));
+                if (screen == null) return;
                 boolean force = buf.readBoolean();
                 if (force) {
                     // TODO check permission
                     screen.skip();
-                    break;
+                    return;
                 }
                 screen.voteSkip(player.getUuid());
             }
             case SKIP_PERCENT -> {
                 // TODO check permission
                 VideoArea area = getArea(player, readName(buf));
-                String name = readName(buf);
-                if (area == null) break;
-                VideoScreen screen = area.getScreen(name);
-                if (screen == null) break;
+                if (area == null) return;
+                VideoScreen screen = area.getScreen(readName(buf));
+                if (screen == null) return;
                 screen.setSkipPercent(buf.readFloat());
+            }
+            case IDLE_PLAY -> {
+                // TODO
+                VideoArea area = getArea(player, readName(buf));
+                if (area == null) return;
+                VideoScreen screen = area.getScreen(readName(buf));
+                if (screen == null) return;
+                readString(buf, 1024);
             }
             default -> player.networkHandler.disconnect(Text.of("Unknown packet type: " + type));
         }
         if (buf.readableBytes() > 0) {
             player.networkHandler.disconnect(Text.of("Illegal packet! Remaining: " + buf.readableBytes()));
         }
+    }
+
+    private static boolean fetchSource(ServerPlayerEntity player, String url, Consumer<VideoInfo> cb) {
+        CompletableFuture<VideoInfo> video = VideoProviders.from(url, new PlayerProviderSource(player));
+        if (video == null) {
+            player.sendMessage(Text.of("无法解析视频源"));
+            return true;
+        }
+        CompletableFuture.supplyAsync(() -> {
+            try {
+                LOGGER.info("start fetch");
+                return video.get();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }).thenAccept(v -> {
+            try {
+                if (v == null) {
+                    player.sendMessage(Text.of("无法解析视频源"));
+                    return;
+                }
+                cb.accept(v);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        return false;
     }
 
     private static VideoArea getArea(ServerPlayerEntity player, String name) {
@@ -184,8 +196,8 @@ public class ServerPacketHandler {
 
     public static byte[] config(String version, ServerConfig config) {
         ByteBuf buf = create(CONFIG);
-        ByteBufUtils.writeString(buf, version);
-        ByteBufUtils.writeString(buf, config.remoteControlName);
+        writeString(buf, version);
+        writeString(buf, config.remoteControlName);
         buf.writeFloat(config.remoteControlId);
         buf.writeFloat(config.remoteControlRange);
         buf.writeFloat(config.noControlRange);
@@ -194,36 +206,36 @@ public class ServerPacketHandler {
 
     public static byte[] request(VideoScreen screen, VideoInfo info) {
         ByteBuf buf = create(REQUEST);
-        ByteBufUtils.writeString(buf, screen.area.name);
-        ByteBufUtils.writeString(buf, screen.name);
+        writeString(buf, screen.area.name);
+        writeString(buf, screen.name);
         VideoInfo.write(buf, info);
         return toByteArray(buf);
     }
 
     public static byte[] sync(VideoScreen screen, long time) {
         ByteBuf buf = create(SYNC);
-        ByteBufUtils.writeString(buf, screen.area.name);
-        ByteBufUtils.writeString(buf, screen.name);
+        writeString(buf, screen.area.name);
+        writeString(buf, screen.name);
         buf.writeLong(time);
         return toByteArray(buf);
     }
 
     public static byte[] createArea(VideoArea area) {
         ByteBuf buf = create(CREATE_AREA);
-        ByteBufUtils.writeString(buf, area.name);
+        writeString(buf, area.name);
         VideoArea.write(buf, area);
         return toByteArray(buf);
     }
 
     public static byte[] removeArea(VideoArea area) {
         ByteBuf buf = create(REMOVE_AREA);
-        ByteBufUtils.writeString(buf, area.name);
+        writeString(buf, area.name);
         return toByteArray(buf);
     }
 
     public static byte[] createScreen(List<VideoScreen> screens) {
         ByteBuf buf = create(CREATE_SCREEN);
-        ByteBufUtils.writeString(buf, screens.getFirst().area.name);
+        writeString(buf, screens.getFirst().area.name);
         buf.writeByte(screens.size());
         for (VideoScreen screen : screens) {
             VideoScreen.write(buf, screen);
@@ -233,18 +245,18 @@ public class ServerPacketHandler {
 
     public static byte[] removeScreen(VideoScreen screen) {
         ByteBuf buf = create(REMOVE_SCREEN);
-        ByteBufUtils.writeString(buf, screen.area.name);
-        ByteBufUtils.writeString(buf, screen.name);
+        writeString(buf, screen.area.name);
+        writeString(buf, screen.name);
         return toByteArray(buf);
     }
 
     public static byte[] loadArea(VideoArea area) {
         ByteBuf buf = create(LOAD_AREA);
-        ByteBufUtils.writeString(buf, area.name);
+        writeString(buf, area.name);
         for (VideoScreen screen : area.screens) {
             VideoInfo info = screen.currentPlaying();
             if (info == null) continue;
-            ByteBufUtils.writeString(buf, screen.name);
+            writeString(buf, screen.name);
             VideoInfo.write(buf, info);
             buf.writeLong(screen.getProgress());
         }
@@ -253,20 +265,20 @@ public class ServerPacketHandler {
 
     public static byte[] unloadArea(VideoArea area) {
         ByteBuf buf = create(UNLOAD_AREA);
-        ByteBufUtils.writeString(buf, area.name);
+        writeString(buf, area.name);
         return toByteArray(buf);
     }
 
     public static byte[] updatePlaylist(List<VideoScreen> screens) {
         ByteBuf buf = create(UPDATE_PLAYLIST);
-        ByteBufUtils.writeString(buf, screens.getFirst().area.name);
+        writeString(buf, screens.getFirst().area.name);
         buf.writeByte(screens.size());
         for (VideoScreen screen : screens) {
-            ByteBufUtils.writeString(buf, screen.name);
+            writeString(buf, screen.name);
             buf.writeByte(screen.infos.size());
             for (VideoInfo info : screen.infos) {
-                ByteBufUtils.writeString(buf, info.playerName());
-                ByteBufUtils.writeString(buf, info.name());
+                writeString(buf, info.playerName());
+                writeString(buf, info.name());
             }
         }
         return toByteArray(buf);
@@ -274,14 +286,14 @@ public class ServerPacketHandler {
 
     public static byte[] skip(VideoScreen screen) {
         ByteBuf buf = create(SKIP);
-        ByteBufUtils.writeString(buf, screen.area.name);
-        ByteBufUtils.writeString(buf, screen.name);
+        writeString(buf, screen.area.name);
+        writeString(buf, screen.name);
         return toByteArray(buf);
     }
 
     public static byte[] execute(String command) {
         ByteBuf buf = create(EXECUTE);
-        ByteBufUtils.writeString(buf, command);
+        writeString(buf, command);
         return toByteArray(buf);
     }
 }
