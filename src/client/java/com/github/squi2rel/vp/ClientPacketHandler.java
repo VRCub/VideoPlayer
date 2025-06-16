@@ -198,5 +198,6 @@ public class ClientPacketHandler {
         writeString(buf, screen.area.name);
         writeString(buf, screen.name);
         writeString(buf, url);
+        send(toByteArray(buf));
     }
 }

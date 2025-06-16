@@ -128,7 +128,7 @@ public class ServerPacketHandler {
                 if (area == null) return;
                 VideoScreen screen = area.getScreen(readName(buf));
                 if (screen == null) return;
-                readString(buf, 1024);
+                readString(buf, 256);
             }
             default -> player.networkHandler.disconnect(Text.of("Unknown packet type: " + type));
         }
