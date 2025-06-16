@@ -255,10 +255,12 @@ public class VideoPlayerClient implements ClientModInitializer {
                 .then(ClientCommandManager.literal("list")
                         .executes(s -> {
                             if (checkInvalid(s, true)) return 0;
-                            s.getSource().sendFeedback(Text.literal(currentScreen.infos.stream()
+                            String str = currentScreen.infos.stream()
                                     .map(i -> String.format("%s 请求玩家: %s", i.name(), i.playerName()))
-                                    .collect(Collectors.joining("\n"))
-                            ).formatted(Formatting.GOLD));
+                                    .collect(Collectors.joining("\n"));
+                            s.getSource().sendFeedback(Text.literal("观影区 %s 屏幕 %s\n%s".formatted(
+                                    currentScreen.area.name, currentScreen.name, str.isEmpty() ? "队列无视频" : str
+                            )).formatted(Formatting.GOLD));
                             return 1;
                         })
                 )
