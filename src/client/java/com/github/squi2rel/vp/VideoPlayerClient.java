@@ -384,11 +384,12 @@ public class VideoPlayerClient implements ClientModInitializer {
                 if (totalProgress > 0) {
                     boolean showHour = progress >= 3600000 || totalProgress >= 3600000;
                     time = formatDuration(progress, showHour) + "/" + formatDuration(totalProgress, showHour);
+                    bossBar.setPercent((float) progress / totalProgress);
                 } else {
                     time = formatDuration(progress, progress >= 3600000) + "/LIVE";
+                    bossBar.setPercent(0);
                 }
                 bossBar.setName(Text.of(name + " " + time));
-                bossBar.setPercent((float) progress / totalProgress);
             } else {
                 bossBar.setName(Text.of("无"));
                 bossBar.setPercent(1);
