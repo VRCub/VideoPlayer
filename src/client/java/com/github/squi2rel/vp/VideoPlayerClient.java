@@ -4,6 +4,7 @@ import com.github.squi2rel.vp.network.VideoPayload;
 import com.github.squi2rel.vp.provider.VideoInfo;
 import com.github.squi2rel.vp.provider.VideoProviders;
 import com.github.squi2rel.vp.video.*;
+import com.google.gson.Gson;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.brigadier.arguments.*;
 import com.mojang.brigadier.context.CommandContext;
@@ -18,6 +19,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.ShaderProgramKeys;
 import net.minecraft.client.gui.hud.ClientBossBar;
@@ -38,11 +40,18 @@ import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.lwjgl.opengl.GL11;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @SuppressWarnings({"resource", "DataFlowIssue"})
 public class VideoPlayerClient implements ClientModInitializer {
+    public static final Path configPath = FabricLoader.getInstance().getConfigDir().resolve("videoplayer-client.json");
+    public static Config config;
+    private static final Gson gson = new Gson();
+
     public static final HashMap<String, ClientVideoArea> areas = new HashMap<>();
     public static final ArrayList<IVideoPlayer> players = new ArrayList<>();
     public static boolean updated = false;
@@ -95,6 +104,7 @@ public class VideoPlayerClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         VlcDecoder.load();
+        loadConfig();
         VideoProviders.register();
         disconnectHandler = () -> MinecraftClient.getInstance().execute(() -> {
             connected = false;
@@ -138,7 +148,12 @@ public class VideoPlayerClient implements ClientModInitializer {
                         .then(ClientCommandManager.argument("volume", IntegerArgumentType.integer(0, 100))
                                 .executes(s -> {
                                     int v = s.getArgument("volume", Integer.class);
-                                    players.getFirst().setVolume(v);
+                                    config.volume = v;
+                                    saveConfig();
+                                    s.getSource().sendFeedback(Text.literal("音量已设置为 " + v).formatted(Formatting.GREEN));
+                                    IVideoPlayer first = players.getFirst();
+                                    if (first == null) return 1;
+                                    first.setVolume(v);
                                     return 1;
                                 })
                         )
@@ -279,6 +294,16 @@ public class VideoPlayerClient implements ClientModInitializer {
                                     return 1;
                                 }))
                 )
+                .then(ClientCommandManager.literal("brightness")
+                        .then(ClientCommandManager.argument("brightness", IntegerArgumentType.integer(0, 100))
+                                .executes(s -> {
+                                    config.brightness = s.getArgument("brightness", Integer.class);
+                                    s.getSource().sendFeedback(Text.literal("亮度已设置为 " + config.brightness).formatted(Formatting.GREEN));
+                                    saveConfig();
+                                    return 1;
+                                })
+                        )
+                )
         ));
         bossBar = new ClientBossBar(UUID.randomUUID(), Text.of(""), 0, BossBar.Color.WHITE, BossBar.Style.PROGRESS, false, false, false);
     }
@@ -322,7 +347,7 @@ public class VideoPlayerClient implements ClientModInitializer {
         matrices.push();
         matrices.translate(-camera.x, -camera.y, -camera.z);
         Matrix4f mat = matrices.peek().getPositionMatrix();
-        RenderSystem.setShader(ShaderProgramKeys.POSITION_TEX);
+        RenderSystem.setShader(ShaderProgramKeys.POSITION_TEX_COLOR);
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(GL11.GL_LESS);
         RenderSystem.disableCull();
@@ -420,7 +445,7 @@ public class VideoPlayerClient implements ClientModInitializer {
 
         ArrayList<Intersection.Result> list = new ArrayList<>();
         for (IVideoPlayer player : players) {
-            Intersection.Result result = Intersection.intersect(lineStart, lineEnd, player.getScreen());
+            Intersection.Result result = Intersection.intersect(lineStart, lineEnd, player.getTrackingScreen());
             if (result.intersects) list.add(result);
         }
         Intersection.Result target = list.isEmpty() ? null : Collections.min(list, Comparator.comparing(s -> s.distance));
@@ -445,6 +470,28 @@ public class VideoPlayerClient implements ClientModInitializer {
             return String.format("%02d:%02d:%02d", hours, minutes, seconds);
         } else {
             return String.format("%02d:%02d", minutes, seconds);
+        }
+    }
+
+    private static void saveConfig() {
+        try {
+            Files.writeString(configPath, gson.toJson(config));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void loadConfig() {
+        try {
+            config = gson.fromJson(Files.readString(configPath), Config.class);
+        } catch (Exception e) {
+            config = new Config();
+            try {
+                saveConfig();
+            } catch (Exception e1) {
+                e1.addSuppressed(e);
+                throw new RuntimeException(e);
+            }
         }
     }
 }

@@ -40,7 +40,7 @@ public class ClientVideoScreen extends VideoScreen {
         } else {
             ClientVideoScreen parent = (ClientVideoScreen) area.screens.stream().filter(v -> Objects.equals(v.name, source)).findAny().orElseThrow();
             ((ClientVideoArea) area).afterLoad(() -> {
-                player = new ClonePlayer(p1, p2, p3, p4, (VideoPlayer) parent.player);
+                player = new ClonePlayer(this, p1, p2, p3, p4, (VideoPlayer) parent.player);
                 VideoPlayerClient.players.add(player);
             });
         }

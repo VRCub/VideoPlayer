@@ -9,6 +9,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ClientPlayNetworkHandler.class)
 public class ClientPlayNetworkHandlerMixin {
+    //@Inject(at = @At("HEAD"), method = "clearWorld")
     @Inject(at = @At("HEAD"), method = "method_54134", remap = false)
     public void clearWorld(CallbackInfo ci) {
         VideoPlayerClient.disconnectHandler.run();

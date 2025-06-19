@@ -8,6 +8,8 @@ import org.joml.Vector3f;
 
 import java.nio.ByteBuffer;
 
+import static com.github.squi2rel.vp.VideoPlayerClient.config;
+
 public class VideoPlayer implements IVideoPlayer {
     public final Vector3f p1, p2, p3, p4;
     private VlcDecoder decoder;
@@ -31,6 +33,11 @@ public class VideoPlayer implements IVideoPlayer {
 
     @Override
     public VideoScreen getScreen() {
+        return screen;
+    }
+
+    @Override
+    public VideoScreen getTrackingScreen() {
         return screen;
     }
 
@@ -78,7 +85,10 @@ public class VideoPlayer implements IVideoPlayer {
         if (targetTime > 0) {
             decoder.onPlay(() -> {
                 long time = targetTime;
-                MinecraftClient.getInstance().execute(() -> decoder.setProgress(time));
+                MinecraftClient.getInstance().execute(() -> {
+                    setVolume(config.volume);
+                    decoder.setProgress(time);
+                });
                 decoder.onPlay(() -> {});
             });
         }

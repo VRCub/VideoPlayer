@@ -1,5 +1,6 @@
 package com.github.squi2rel.vp.video;
 
+import com.github.squi2rel.vp.ClientVideoScreen;
 import com.github.squi2rel.vp.provider.VideoInfo;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
@@ -10,7 +11,10 @@ public class ClonePlayer implements IVideoPlayer {
     public boolean vertical;
     public float scale;
 
-    public ClonePlayer(Vector3f p1, Vector3f p2, Vector3f p3, Vector3f p4, VideoPlayer source) {
+    private final ClientVideoScreen screen;
+
+    public ClonePlayer(ClientVideoScreen screen, Vector3f p1, Vector3f p2, Vector3f p3, Vector3f p4, VideoPlayer source) {
+        this.screen = screen;
         this.p1 = new Vector3f(p1);
         this.p2 = new Vector3f(p2);
         this.p3 = new Vector3f(p3);
@@ -21,6 +25,11 @@ public class ClonePlayer implements IVideoPlayer {
     @Override
     public VideoScreen getScreen() {
         return source.getScreen();
+    }
+
+    @Override
+    public VideoScreen getTrackingScreen() {
+        return screen;
     }
 
     @Override
