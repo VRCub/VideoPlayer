@@ -1,6 +1,7 @@
 package com.github.squi2rel.vp;
 
 import com.github.squi2rel.vp.network.ByteBufUtils;
+import com.github.squi2rel.vp.network.ServerPacketHandler;
 import com.github.squi2rel.vp.network.VideoPayload;
 import com.github.squi2rel.vp.provider.VideoInfo;
 import com.github.squi2rel.vp.video.*;
@@ -32,7 +33,7 @@ public class ClientPacketHandler {
                 String version = ByteBufUtils.readString(buf, 16);
                 if (!VideoPlayerClient.checkVersion(version)) {
                     Objects.requireNonNull(MinecraftClient.getInstance().player).sendMessage(Text.of("服务器VideoPlayer版本和本地版本不匹配! 本地版本为" + VideoPlayerMain.version + ", 服务器版本为" + version), false);
-                    break;
+                    return;
                 }
                 VideoPlayerClient.remoteControlName = ByteBufUtils.readString(buf, 256);
                 VideoPlayerClient.remoteControlId = buf.readFloat();
@@ -54,6 +55,7 @@ public class ClientPacketHandler {
                 short size = buf.readUnsignedByte();
                 for (int i = 0; i < size; i++) {
                     ClientVideoScreen screen = ClientVideoScreen.from(VideoScreen.read(buf, area));
+                    ServerPacketHandler.readUV(buf, screen);
                     area.addScreen(screen);
                 }
             }
@@ -70,7 +72,7 @@ public class ClientPacketHandler {
             case UNLOAD_AREA -> areas.get(readName(buf)).unload();
             case UPDATE_PLAYLIST -> {
                 ClientVideoArea area = areas.get(readName(buf));
-                if (area == null) break;
+                if (area == null) return;
                 short size = buf.readUnsignedByte();
                 for (int i = 0; i < size; i++) {
                     ClientVideoScreen screen = area.getScreen(readName(buf));
@@ -84,9 +86,9 @@ public class ClientPacketHandler {
             }
             case SKIP -> {
                 ClientVideoScreen screen = areas.get(readName(buf)).getScreen(readName(buf));
-                if (screen == null) break;
+                if (screen == null) return;
                 VideoPlayer player = (VideoPlayer) screen.player;
-                if (player == null) break;
+                if (player == null) return;
                 MinecraftClient.getInstance().execute(player::stop);
             }
             case EXECUTE -> {
@@ -99,6 +101,11 @@ public class ClientPacketHandler {
                         client.player.sendMessage(Text.literal("执行指令失败: " + e).formatted(Formatting.RED), false);
                     }
                 }
+            }
+            case SLICE -> {
+                ClientVideoScreen screen = areas.get(readName(buf)).getScreen(readName(buf));
+                if (screen == null) return;
+                ServerPacketHandler.readUV(buf, screen);
             }
             default -> LOGGER.warn("Unknown packet type: {}", type);
         }
@@ -198,6 +205,17 @@ public class ClientPacketHandler {
         writeString(buf, screen.area.name);
         writeString(buf, screen.name);
         writeString(buf, url);
+        send(toByteArray(buf));
+    }
+    
+    public static void slice(VideoScreen screen, float u1, float v1, float u2, float v2) {
+        send(ServerPacketHandler.slice(screen, u1, v1, u2, v2));
+    }
+
+    public static void openMenu(VideoScreen screen) {
+        ByteBuf buf = create(OPEN_MENU);
+        writeString(buf, screen.area.name);
+        writeString(buf, screen.name);
         send(toByteArray(buf));
     }
 }

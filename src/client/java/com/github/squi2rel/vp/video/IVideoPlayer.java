@@ -9,7 +9,7 @@ import org.joml.Vector3f;
 import static com.github.squi2rel.vp.VideoPlayerClient.config;
 
 public interface IVideoPlayer {
-    Vector3f v1 = new Vector3f(), v2 = new Vector3f(), v3 = new Vector3f(), v4 = new Vector3f();
+    Vector3f tmp1 = new Vector3f(), tmp2 = new Vector3f(), tmp3 = new Vector3f(), tmp4 = new Vector3f();
 
     VideoScreen getScreen();
 
@@ -47,16 +47,16 @@ public interface IVideoPlayer {
 
     void draw(Matrix4f mat);
 
-    default void draw(Matrix4f mat, int id, Vector3f p1, Vector3f p2, Vector3f p3, Vector3f p4) {
+    default void draw(Matrix4f mat, int id, Vector3f p1, Vector3f p2, Vector3f p3, Vector3f p4, float u1, float v1, float u2, float v2) {
         int old = RenderSystem.getShaderTexture(0);
         RenderSystem.setShaderTexture(0, id);
         BufferBuilder bufferBuilder = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
         int gray = (int) (config.brightness / 100.0 * 255);
         int color = 0xFF000000 | (gray << 16) | (gray << 8) | gray;
-        bufferBuilder.vertex(mat, p1.x, p1.y, p1.z).texture(0, 0).color(color);
-        bufferBuilder.vertex(mat, p2.x, p2.y, p2.z).texture(0, 1).color(color);
-        bufferBuilder.vertex(mat, p3.x, p3.y, p3.z).texture(1, 1).color(color);
-        bufferBuilder.vertex(mat, p4.x, p4.y, p4.z).texture(1, 0).color(color);
+        bufferBuilder.vertex(mat, p1.x, p1.y, p1.z).texture(u1, v1).color(color);
+        bufferBuilder.vertex(mat, p2.x, p2.y, p2.z).texture(u1, v2).color(color);
+        bufferBuilder.vertex(mat, p3.x, p3.y, p3.z).texture(u2, v2).color(color);
+        bufferBuilder.vertex(mat, p4.x, p4.y, p4.z).texture(u2, v1).color(color);
         BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
         RenderSystem.setShaderTexture(0, old);
     }

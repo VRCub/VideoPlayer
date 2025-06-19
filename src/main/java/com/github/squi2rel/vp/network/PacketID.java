@@ -15,5 +15,7 @@ public class PacketID {
     SKIP = 10,
     SKIP_PERCENT = 11,
     EXECUTE = 12,
-    IDLE_PLAY = 13;
+    IDLE_PLAY = 13,
+    SLICE = 14,
+    OPEN_MENU = 15;
 }

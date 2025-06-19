@@ -101,8 +101,8 @@ public class ClonePlayer implements IVideoPlayer {
 
     @Override
     public void draw(Matrix4f mat) {
-        float sx = p1.sub(p4, v1).length() / source.videoWidth;
-        float sy = p1.sub(p2, v1).length() / source.videoHeight;
+        float sx = p1.sub(p4, tmp1).length() / source.videoWidth;
+        float sy = p1.sub(p2, tmp1).length() / source.videoHeight;
         if (sx < sy) {
             scale = sx / sy;
             vertical = true;
@@ -111,14 +111,14 @@ public class ClonePlayer implements IVideoPlayer {
             vertical = false;
         }
         if (scale == 1) {
-            draw(mat, source.getTextureId(), p1, p2, p3, p4);
+            draw(mat, source.getTextureId(), p1, p2, p3, p4, screen.u1, screen.v1, screen.u2, screen.v2);
             return;
         }
         float inv = (1 - scale) / 2;
         if (vertical) {
-            draw(mat, source.getTextureId(), p1.lerp(p2, inv, v1), p2.lerp(p1, inv, v2), p3.lerp(p4, inv, v3), p4.lerp(p3, inv, v4));
+            draw(mat, source.getTextureId(), p1.lerp(p2, inv, tmp1), p2.lerp(p1, inv, tmp2), p3.lerp(p4, inv, tmp3), p4.lerp(p3, inv, tmp4), screen.u1, screen.v1, screen.u2, screen.v2);
         } else {
-            draw(mat, source.getTextureId(), p1.lerp(p4, inv, v1), p2.lerp(p3, inv, v2), p3.lerp(p2, inv, v3), p4.lerp(p1, inv, v4));
+            draw(mat, source.getTextureId(), p1.lerp(p4, inv, tmp1), p2.lerp(p3, inv, tmp2), p3.lerp(p2, inv, tmp3), p4.lerp(p1, inv, tmp4), screen.u1, screen.v1, screen.u2, screen.v2);
         }
     }
 }

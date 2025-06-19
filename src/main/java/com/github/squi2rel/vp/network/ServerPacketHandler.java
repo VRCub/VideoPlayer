@@ -128,7 +128,27 @@ public class ServerPacketHandler {
                 if (area == null) return;
                 VideoScreen screen = area.getScreen(readName(buf));
                 if (screen == null) return;
-                readString(buf, 256);
+                readString(buf, 1024);
+            }
+            case SLICE -> {
+                // TODO check permission
+                VideoArea area = getArea(player, readName(buf));
+                if (area == null) return;
+                VideoScreen screen = area.getScreen(readName(buf));
+                if (screen == null) return;
+                readUV(buf, screen);
+                if (area.hasPlayer()) {
+                    byte[] data = slice(screen, screen.u1, screen.u2, screen.v1, screen.v2);
+                    PlayerManager pm = Objects.requireNonNull(player.getServer()).getPlayerManager();
+                    area.forEachPlayer(p -> sendTo(pm.getPlayer(p), data));
+                }
+            }
+            case OPEN_MENU -> {
+                // TODO
+                VideoArea area = getArea(player, readName(buf));
+                if (area == null) return;
+                VideoScreen screen = area.getScreen(readName(buf));
+                if (screen == null) return;
             }
             default -> player.networkHandler.disconnect(Text.of("Unknown packet type: " + type));
         }
@@ -190,6 +210,20 @@ public class ServerPacketHandler {
         return bytes;
     }
 
+    public static void readUV(ByteBuf buf, VideoScreen screen) {
+        screen.u1 = buf.readFloat();
+        screen.v1 = buf.readFloat();
+        screen.u2 = buf.readFloat();
+        screen.v2 = buf.readFloat();
+    }
+
+    public static void writeUV(ByteBuf buf, VideoScreen screen) {
+        buf.writeFloat(screen.u1);
+        buf.writeFloat(screen.v1);
+        buf.writeFloat(screen.u2);
+        buf.writeFloat(screen.v2);
+    }
+
     public static void sendTo(ServerPlayerEntity player, byte[] bytes) {
         ServerPlayNetworking.send(player, new VideoPayload(bytes));
     }
@@ -239,6 +273,7 @@ public class ServerPacketHandler {
         buf.writeByte(screens.size());
         for (VideoScreen screen : screens) {
             VideoScreen.write(buf, screen);
+            writeUV(buf, screen);
         }
         return toByteArray(buf);
     }
@@ -294,6 +329,17 @@ public class ServerPacketHandler {
     public static byte[] execute(String command) {
         ByteBuf buf = create(EXECUTE);
         writeString(buf, command);
+        return toByteArray(buf);
+    }
+
+    public static byte[] slice(VideoScreen screen, float u1, float v1, float u2, float v2) {
+        ByteBuf buf = create(SLICE);
+        writeString(buf, screen.area.name);
+        writeString(buf, screen.name);
+        buf.writeFloat(u1);
+        buf.writeFloat(v1);
+        buf.writeFloat(u2);
+        buf.writeFloat(v2);
         return toByteArray(buf);
     }
 }

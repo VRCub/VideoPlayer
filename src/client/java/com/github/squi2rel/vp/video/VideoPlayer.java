@@ -61,8 +61,8 @@ public class VideoPlayer implements IVideoPlayer {
                 videoWidth = w;
                 videoHeight = h;
                 quad.resize(w, h);
-                float sx = p1.sub(p4, v1).length() / w;
-                float sy = p1.sub(p2, v1).length() / h;
+                float sx = p1.sub(p4, tmp1).length() / w;
+                float sy = p1.sub(p2, tmp1).length() / h;
                 if (sx < sy) {
                     scale = sx / sy;
                     vertical = true;
@@ -157,14 +157,14 @@ public class VideoPlayer implements IVideoPlayer {
     @Override
     public void draw(Matrix4f mat) {
         if (scale == 1) {
-            draw(mat, getTextureId(), p1, p2, p3, p4);
+            draw(mat, getTextureId(), p1, p2, p3, p4, screen.u1, screen.v1, screen.u2, screen.v2);
             return;
         }
         float inv = (1 - scale) / 2;
         if (vertical) {
-            draw(mat, getTextureId(), p1.lerp(p2, inv, v1), p2.lerp(p1, inv, v2), p3.lerp(p4, inv, v3), p4.lerp(p3, inv, v4));
+            draw(mat, getTextureId(), p1.lerp(p2, inv, tmp1), p2.lerp(p1, inv, tmp2), p3.lerp(p4, inv, tmp3), p4.lerp(p3, inv, tmp4), screen.u1, screen.v1, screen.u2, screen.v2);
         } else {
-            draw(mat, getTextureId(), p1.lerp(p4, inv, v1), p2.lerp(p3, inv, v2), p3.lerp(p2, inv, v3), p4.lerp(p1, inv, v4));
+            draw(mat, getTextureId(), p1.lerp(p4, inv, tmp1), p2.lerp(p3, inv, tmp2), p3.lerp(p2, inv, tmp3), p4.lerp(p1, inv, tmp4), screen.u1, screen.v1, screen.u2, screen.v2);
         }
     }
 

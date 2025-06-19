@@ -33,6 +33,7 @@ import net.minecraft.network.packet.s2c.play.BossBarS2CPacket;
 import net.minecraft.registry.Registries;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Hand;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.profiler.Profilers;
 import org.apache.commons.lang3.StringUtils;
@@ -60,6 +61,7 @@ public class VideoPlayerClient implements ClientModInitializer {
     private static boolean isInArea = false;
     private static BossBar bossBar = null;
     private static boolean bossBarAdded = false;
+    private static boolean keyPressed = false;
 
     public static boolean connected = false;
     public static String remoteControlName = "minecraft:iron_ingot";
@@ -150,7 +152,7 @@ public class VideoPlayerClient implements ClientModInitializer {
                                     int v = s.getArgument("volume", Integer.class);
                                     config.volume = v;
                                     saveConfig();
-                                    s.getSource().sendFeedback(Text.literal("音量已设置为 " + v).formatted(Formatting.GREEN));
+                                    s.getSource().sendFeedback(Text.literal("音量已设置为 " + v + "%").formatted(Formatting.GREEN));
                                     IVideoPlayer first = players.getFirst();
                                     if (first == null) return 1;
                                     first.setVolume(v);
@@ -298,13 +300,48 @@ public class VideoPlayerClient implements ClientModInitializer {
                         .then(ClientCommandManager.argument("brightness", IntegerArgumentType.integer(0, 100))
                                 .executes(s -> {
                                     config.brightness = s.getArgument("brightness", Integer.class);
-                                    s.getSource().sendFeedback(Text.literal("亮度已设置为 " + config.brightness).formatted(Formatting.GREEN));
+                                    s.getSource().sendFeedback(Text.literal("亮度已设置为 " + config.brightness + "%").formatted(Formatting.GREEN));
                                     saveConfig();
                                     return 1;
                                 })
                         )
                 )
+                .then(ClientCommandManager.literal("slice")
+                        .then(ClientCommandManager.argument("u1", FloatArgumentType.floatArg(0, 1))
+                        .then(ClientCommandManager.argument("v1", FloatArgumentType.floatArg(0, 1))
+                        .then(ClientCommandManager.argument("u2", FloatArgumentType.floatArg(0, 1))
+                        .then(ClientCommandManager.argument("v2", FloatArgumentType.floatArg(0, 1))
+                                .executes(s -> {
+                                    if (checkInvalidLooking(s)) return 0;
+                                    float u1 = s.getArgument("u1", Float.class);
+                                    float v1 = s.getArgument("v1", Float.class);
+                                    float u2 = s.getArgument("u2", Float.class);
+                                    float v2 = s.getArgument("v2", Float.class);
+                                    ClientPacketHandler.slice(currentLooking, u1, v1, u2, v2);
+                                    return 1;
+                                })
+                        ))))
+                )
+                .then(ClientCommandManager.literal("stop")
+                        .executes(s -> {
+                            if (checkInvalid(s, true)) return 0;
+                            currentScreen.player.stop();
+                            return 1;
+                        })
+                )
         ));
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (client.player == null || client.world == null || client.currentScreen != null || currentLooking == null) return;
+            boolean pressed = client.options.useKey.isPressed();
+            if (pressed && !keyPressed) {
+                keyPressed = true;
+                if (client.player.getStackInHand(Hand.MAIN_HAND).isEmpty() && client.player.getStackInHand(Hand.OFF_HAND).isEmpty()) {
+                    ClientPacketHandler.openMenu(currentLooking);
+                }
+            } else if (!pressed) {
+                keyPressed = false;
+            }
+        });
         bossBar = new ClientBossBar(UUID.randomUUID(), Text.of(""), 0, BossBar.Color.WHITE, BossBar.Style.PROGRESS, false, false, false);
     }
 
@@ -330,6 +367,18 @@ public class VideoPlayerClient implements ClientModInitializer {
             } else {
                 s.getSource().sendFeedback(Text.literal("当前没有在观影区内").formatted(Formatting.RED));
             }
+            return true;
+        }
+        return false;
+    }
+
+    private boolean checkInvalidLooking(CommandContext<FabricClientCommandSource> s) {
+        if (!connected) {
+            s.getSource().sendFeedback(Text.literal("未连接到服务器").formatted(Formatting.RED));
+            return true;
+        }
+        if (currentLooking == null) {
+            s.getSource().sendFeedback(Text.literal("当前没有看向屏幕").formatted(Formatting.RED));
             return true;
         }
         return false;
@@ -378,7 +427,7 @@ public class VideoPlayerClient implements ClientModInitializer {
             VideoInfo info = currentLooking.player.getScreen().infos.peek();
             if (info != null) {
                 String name = info.name();
-                long progress = System.currentTimeMillis() - currentLooking.getStartTime();
+                long progress = System.currentTimeMillis() - ((ClientVideoScreen) currentLooking.player.getScreen()).getStartTime();
                 long totalProgress = currentLooking.player.getTotalProgress();
                 String time;
                 if (totalProgress > 0) {

@@ -22,10 +22,8 @@ public class VideoScreen {
 
     public transient VideoArea area;
     public String name;
-    public Vector3f p1;
-    public Vector3f p2;
-    public Vector3f p3;
-    public Vector3f p4;
+    public Vector3f p1, p2, p3, p4;
+    public float u1 = 0, v1 = 0, u2 = 1, v2 = 1;
     public String source;
     public float skipPercent = 0.5f;
     public ArrayDeque<VideoInfo> infos = new ArrayDeque<>();
