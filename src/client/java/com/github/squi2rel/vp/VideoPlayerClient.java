@@ -341,6 +341,13 @@ public class VideoPlayerClient implements ClientModInitializer {
         checkInteract(ctx);
         Profilers.get().swap("updateBossBar");
         updateBossBar();
+        Profilers.get().swap("updateFrame");
+        if (!updated) {
+            for (IVideoPlayer player : players) {
+                player.updateTexture();
+            }
+            updated = true;
+        }
         Profilers.get().swap("render");
         MatrixStack matrices = ctx.matrixStack();
         Vec3d camera = ctx.camera().getPos();
@@ -368,7 +375,7 @@ public class VideoPlayerClient implements ClientModInitializer {
                 handler.onBossBar(BossBarS2CPacket.add(bossBar));
                 bossBarAdded = true;
             }
-            VideoInfo info = currentLooking.infos.peek();
+            VideoInfo info = currentLooking.player.getScreen().infos.peek();
             if (info != null) {
                 String name = info.name();
                 long progress = System.currentTimeMillis() - currentLooking.getStartTime();
@@ -392,13 +399,6 @@ public class VideoPlayerClient implements ClientModInitializer {
             ClientPlayNetworkHandler handler = MinecraftClient.getInstance().getNetworkHandler();
             handler.onBossBar(BossBarS2CPacket.remove(bossBar.getUuid()));
             bossBarAdded = false;
-        }
-        Profilers.get().swap("updateFrame");
-        if (!updated) {
-            for (IVideoPlayer player : players) {
-                player.updateTexture();
-            }
-            updated = true;
         }
     }
 
