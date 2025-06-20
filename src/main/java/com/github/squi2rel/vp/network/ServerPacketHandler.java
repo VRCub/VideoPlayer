@@ -138,7 +138,7 @@ public class ServerPacketHandler {
                 if (screen == null) return;
                 readUV(buf, screen);
                 if (area.hasPlayer()) {
-                    byte[] data = slice(screen, screen.u1, screen.u2, screen.v1, screen.v2);
+                    byte[] data = slice(screen, screen.u1, screen.v1, screen.u2, screen.v2);
                     PlayerManager pm = Objects.requireNonNull(player.getServer()).getPlayerManager();
                     area.forEachPlayer(p -> sendTo(pm.getPlayer(p), data));
                 }

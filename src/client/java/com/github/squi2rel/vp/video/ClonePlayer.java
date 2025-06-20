@@ -8,8 +8,6 @@ import org.joml.Vector3f;
 public class ClonePlayer implements IVideoPlayer {
     public final VideoPlayer source;
     private final Vector3f p1, p2, p3, p4;
-    public boolean vertical;
-    public float scale;
 
     private final ClientVideoScreen screen;
 
@@ -101,8 +99,10 @@ public class ClonePlayer implements IVideoPlayer {
 
     @Override
     public void draw(Matrix4f mat) {
-        float sx = p1.sub(p4, tmp1).length() / source.videoWidth;
-        float sy = p1.sub(p2, tmp1).length() / source.videoHeight;
+        float sx = p1.sub(p4, tmp1).length() / (source.videoWidth * Math.abs(screen.u1 - screen.u2));
+        float sy = p1.sub(p2, tmp1).length() / (source.videoHeight * Math.abs(screen.v1 - screen.v2));
+        boolean vertical;
+        float scale;
         if (sx < sy) {
             scale = sx / sy;
             vertical = true;

@@ -17,8 +17,6 @@ public class VideoPlayer implements IVideoPlayer {
     private boolean initialized = false;
     private boolean changed = false;
     private long targetTime = -1;
-    public boolean vertical;
-    public float scale;
     public int videoWidth, videoHeight;
 
     private final ClientVideoScreen screen;
@@ -61,15 +59,6 @@ public class VideoPlayer implements IVideoPlayer {
                 videoWidth = w;
                 videoHeight = h;
                 quad.resize(w, h);
-                float sx = p1.sub(p4, tmp1).length() / w;
-                float sy = p1.sub(p2, tmp1).length() / h;
-                if (sx < sy) {
-                    scale = sx / sy;
-                    vertical = true;
-                } else {
-                    scale = sy / sx;
-                    vertical = false;
-                }
                 changed = false;
             });
         });
@@ -156,6 +145,17 @@ public class VideoPlayer implements IVideoPlayer {
 
     @Override
     public void draw(Matrix4f mat) {
+        float sx = p1.sub(p4, tmp1).length() / (videoWidth * Math.abs(screen.u1 - screen.u2));
+        float sy = p1.sub(p2, tmp1).length() / (videoHeight * Math.abs(screen.v1 - screen.v2));
+        boolean vertical;
+        float scale;
+        if (sx < sy) {
+            scale = sx / sy;
+            vertical = true;
+        } else {
+            scale = sy / sx;
+            vertical = false;
+        }
         if (scale == 1) {
             draw(mat, getTextureId(), p1, p2, p3, p4, screen.u1, screen.v1, screen.u2, screen.v2);
             return;
