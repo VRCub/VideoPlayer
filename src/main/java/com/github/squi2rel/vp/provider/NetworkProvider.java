@@ -1,5 +1,6 @@
 package com.github.squi2rel.vp.provider;
 
+import com.github.squi2rel.vp.video.IVideoListener;
 import com.github.squi2rel.vp.video.StreamListener;
 import org.jetbrains.annotations.Nullable;
 
@@ -22,7 +23,7 @@ public class NetworkProvider implements IVideoProvider {
     }
 
     private static @Nullable StreamInfo getStreamInfo(String mrl) {
-        StreamListener listener = new StreamListener(new VideoInfo(null, null, mrl, null, -1, false, NO_PARAMS));
+        IVideoListener listener = new StreamListener(new VideoInfo(null, null, mrl, null, -1, false, NO_PARAMS));
         CompletableFuture<Boolean> lock = new CompletableFuture<>();
         listener.timeout(() -> lock.complete(null));
         listener.errored(() -> lock.complete(null));

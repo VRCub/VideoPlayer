@@ -7,7 +7,6 @@ import com.github.squi2rel.vp.provider.NamedProviderSource;
 import com.github.squi2rel.vp.provider.VideoInfo;
 import com.github.squi2rel.vp.provider.VideoProviders;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.PlayerManager;
 import org.joml.Vector3f;
 
@@ -15,6 +14,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static com.github.squi2rel.vp.DataHolder.server;
 import static com.github.squi2rel.vp.VideoPlayerMain.LOGGER;
 
 public class VideoScreen {
@@ -27,12 +27,12 @@ public class VideoScreen {
     public String source;
     public float skipPercent = 0.5f;
     public ArrayDeque<VideoInfo> infos = new ArrayDeque<>();
-    private transient StreamListener now;
-    private transient CompletableFuture<StreamListener> nextTask;
+    public boolean muted = false;
+    public boolean interactable = true;
+    private transient IVideoListener now;
+    private transient CompletableFuture<IVideoListener> nextTask;
     private transient HashSet<UUID> skipped;
     private transient ReentrantLock lock;
-
-    private transient MinecraftServer server;
 
     public VideoScreen(VideoArea area, String name, Vector3f p1, Vector3f p2, Vector3f p3, Vector3f p4, String source) {
         this.area = area;
@@ -44,6 +44,16 @@ public class VideoScreen {
         this.source = source;
     }
 
+    public void readMeta(ByteBuf buf) {
+        muted = buf.readBoolean();
+        interactable = buf.readBoolean();
+    }
+
+    public void writeMeta(ByteBuf buf) {
+        buf.writeBoolean(muted);
+        buf.writeBoolean(interactable);
+    }
+
     public void syncInfo() {
         PlayerManager pm = server.getPlayerManager();
         lock();
@@ -52,10 +62,9 @@ public class VideoScreen {
         area.forEachPlayer(u -> ServerPacketHandler.sendTo(pm.getPlayer(u), data));
     }
 
-    public void initServer(MinecraftServer server) {
+    public void initServer() {
         skipped = new HashSet<>();
         lock = new ReentrantLock();
-        this.server = server;
         playNext();
     }
 
@@ -166,7 +175,11 @@ public class VideoScreen {
                 DataHolder.unlock();
             }
             syncInfo();
-            return now = new StreamListener(info);
+            try {
+                info = Objects.requireNonNull(VideoProviders.from(info.rawPath(), new NamedProviderSource(info.playerName()))).get();
+            } catch (Exception ignored) {
+            }
+            return now = VideoListeners.from(info);
         });
         nextTask.thenAccept(s -> {
             if (s == null) return;

@@ -86,7 +86,7 @@ public class VlcDecoder {
     }
 
     public void init(VideoInfo info) {
-        mediaPlayer.media().play(info.path(), info.vlcParams());
+        mediaPlayer.media().play(info.path(), info.params());
     }
 
     public ByteBuffer decodeNextFrame() {
@@ -95,7 +95,9 @@ public class VlcDecoder {
 
     public void cleanup() {
         stop();
-        mediaPlayer.release();
+        Thread t = new Thread(mediaPlayer::release);
+        t.setDaemon(true);
+        t.start();
     }
 
     public void stop() {

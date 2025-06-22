@@ -1,5 +1,6 @@
 package com.github.squi2rel.vp;
 
+import com.github.squi2rel.vp.network.PacketID;
 import com.github.squi2rel.vp.network.VideoPayload;
 import com.github.squi2rel.vp.provider.VideoInfo;
 import com.github.squi2rel.vp.provider.VideoProviders;
@@ -16,6 +17,7 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
@@ -35,6 +37,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.profiler.Profiler;
 import net.minecraft.util.profiler.Profilers;
 import org.apache.commons.lang3.StringUtils;
 import org.joml.Matrix4f;
@@ -54,8 +57,7 @@ public class VideoPlayerClient implements ClientModInitializer {
     private static final Gson gson = new Gson();
 
     public static final HashMap<String, ClientVideoArea> areas = new HashMap<>();
-    public static final ArrayList<IVideoPlayer> players = new ArrayList<>();
-    public static boolean updated = false;
+    public static final ArrayList<ClientVideoScreen> screens = new ArrayList<>();
     private static final TouchHandler touchHandler = new TouchHandler();
     private static ClientVideoScreen currentLooking, currentScreen;
     private static boolean isInArea = false;
@@ -69,12 +71,13 @@ public class VideoPlayerClient implements ClientModInitializer {
     public static float remoteControlRange = 64;
     public static float noControlRange = 16;
 
+    public static boolean rendered = false;
     public static Runnable disconnectHandler = () -> {};
 
     private static final SuggestionProvider<FabricClientCommandSource> SUGGEST_AREAS = (context, builder) -> {
         for (ClientVideoArea a : areas.values()) {
             if (a.name.startsWith(builder.getRemaining())) {
-                builder.suggest(a.name);
+                builder.suggest("\"" + a.name.replace("\\", "\\\\") + "\"");
             }
         }
         return builder.buildFuture();
@@ -84,8 +87,9 @@ public class VideoPlayerClient implements ClientModInitializer {
         ClientVideoArea area = areas.get(context.getArgument("area", String.class));
         if (area == null) return Suggestions.empty();
         for (VideoScreen screen : area.screens) {
+            if (!screen.interactable) continue;
             if (screen.name.startsWith(builder.getRemaining())) {
-                builder.suggest(screen.name);
+                builder.suggest("\"" + screen.name.replace("\\", "\\\\") + "\"");
             }
         }
         return builder.buildFuture();
@@ -95,9 +99,9 @@ public class VideoPlayerClient implements ClientModInitializer {
         ClientVideoArea area = areas.get(context.getArgument("area", String.class));
         if (area == null) return Suggestions.empty();
         for (VideoScreen screen : area.screens) {
-            if (!screen.source.isEmpty()) continue;
+            if (!screen.source.isEmpty() || !screen.interactable) continue;
             if (screen.name.startsWith(builder.getRemaining())) {
-                builder.suggest(screen.name);
+                builder.suggest("\"" + screen.name.replace("\\", "\\\\") + "\"");
             }
         }
         return builder.buildFuture();
@@ -114,35 +118,56 @@ public class VideoPlayerClient implements ClientModInitializer {
                 area.remove();
             }
             areas.clear();
-            for (IVideoPlayer player : players) {
-                player.cleanup();
+            for (ClientVideoScreen screen : screens) {
+                screen.cleanup();
             }
-            players.clear();
+            screens.clear();
             currentLooking = null;
         });
+        ClientPlayConnectionEvents.JOIN.register((h, s, c) -> {
+            if (config.alwaysConnected) ClientPacketHandler.config(VideoPlayerMain.version);
+        });
+        WorldRenderEvents.END.register(e -> VideoPlayerClient.update());
         WorldRenderEvents.LAST.register(this::render);
-        ClientTickEvents.START_CLIENT_TICK.register(c -> updated = false);
         ClientPlayNetworking.registerGlobalReceiver(VideoPayload.ID, (p, c) -> MinecraftClient.getInstance().execute(() -> ClientPacketHandler.handle(Unpooled.wrappedBuffer(p.data()))));
         ClientCommandRegistrationCallback.EVENT.register((d, c) -> d.register(ClientCommandManager.literal("vlc")
                 .then(ClientCommandManager.literal("play")
                         .then(ClientCommandManager.argument("url", StringArgumentType.greedyString())
                                 .executes(s -> {
                                     if (checkInvalid(s, true)) return 0;
-                                    ClientPacketHandler.request(currentScreen, s.getArgument("url", String.class));
+                                    ClientPacketHandler.request(currentScreen.getScreen(), s.getArgument("url", String.class));
                                     return 1;
-                                })
-                        ))
+                                })))
+                .then(ClientCommandManager.literal("playthat")
+                        .then(ClientCommandManager.argument("area", StringArgumentType.string()).suggests(SUGGEST_AREAS)
+                                .then(ClientCommandManager.argument("screen", StringArgumentType.string()).suggests(SUGGEST_REAL_SCREENS)
+                                        .then(ClientCommandManager.argument("url", StringArgumentType.greedyString())
+                                                .executes(s -> {
+                                                    ClientVideoScreen screen = getScreen(s);
+                                                    if (screen == null) return 0;
+                                                    ClientPacketHandler.request(screen.getScreen(), s.getArgument("url", String.class));
+                                                    return 1;
+                                                })))))
                 .then(ClientCommandManager.literal("skip")
                         .then(ClientCommandManager.argument("force", BoolArgumentType.bool())
                                 .executes(s -> {
                                     if (checkInvalid(s, true)) return 0;
-                                    ClientPacketHandler.skip(currentScreen, s.getArgument("force", Boolean.class));
+                                    ClientPacketHandler.skip(currentScreen.getScreen(), s.getArgument("force", Boolean.class));
                                     return 1;
-                                })
-                        )
+                                }))
+                        .then(ClientCommandManager.argument("area", StringArgumentType.string()).suggests(SUGGEST_AREAS)
+                                .then(ClientCommandManager.argument("screen", StringArgumentType.string()).suggests(SUGGEST_REAL_SCREENS)
+                                        .then(ClientCommandManager.argument("force", BoolArgumentType.bool())
+                                                .executes(s -> {
+                                                    ClientVideoScreen screen = getScreen(s);
+                                                    if (screen == null) return 0;
+                                                    ClientPacketHandler.skip(screen.getScreen(), s.getArgument("force", Boolean.class));
+                                                    return 1;
+                                                })
+                                        )))
                         .executes(s -> {
                             if (checkInvalid(s, true)) return 0;
-                            ClientPacketHandler.skip(currentScreen, false);
+                            ClientPacketHandler.skip(currentScreen.getScreen(), false);
                             return 1;
                         })
                 )
@@ -153,13 +178,11 @@ public class VideoPlayerClient implements ClientModInitializer {
                                     config.volume = v;
                                     saveConfig();
                                     s.getSource().sendFeedback(Text.literal("音量已设置为 " + v + "%").formatted(Formatting.GREEN));
-                                    IVideoPlayer first = players.getFirst();
+                                    ClientVideoScreen first = screens.stream().filter(cs -> cs.player instanceof VideoPlayer).findAny().orElse(null);
                                     if (first == null) return 1;
-                                    first.setVolume(v);
+                                    first.player.setVolume(v);
                                     return 1;
-                                })
-                        )
-                )
+                                })))
                 .then(ClientCommandManager.literal("createArea")
                         .then(ClientCommandManager.argument("x1", FloatArgumentType.floatArg())
                         .then(ClientCommandManager.argument("y1", FloatArgumentType.floatArg())
@@ -184,9 +207,7 @@ public class VideoPlayerClient implements ClientModInitializer {
                                             s.getArgument("name", String.class)
                                     );
                                     return 1;
-                                })))
-                        )))))
-                )
+                                })))))))))
                 .then(ClientCommandManager.literal("removeArea")
                         .then(ClientCommandManager.argument("name", StringArgumentType.string()).suggests(SUGGEST_AREAS)
                                 .executes(s -> {
@@ -194,8 +215,7 @@ public class VideoPlayerClient implements ClientModInitializer {
                                     String name = s.getArgument("name", String.class);
                                     ClientPacketHandler.removeArea(name);
                                     return 1;
-                                }))
-                )
+                                })))
                 .then(ClientCommandManager.literal("createScreen")
                         .then(ClientCommandManager.argument("area", StringArgumentType.string()).suggests(SUGGEST_AREAS)
                         .then(ClientCommandManager.argument("name", StringArgumentType.string())
@@ -213,7 +233,7 @@ public class VideoPlayerClient implements ClientModInitializer {
                         .then(ClientCommandManager.argument("z4", FloatArgumentType.floatArg())
                         .then(ClientCommandManager.argument("source", StringArgumentType.string()).suggests(SUGGEST_REAL_SCREENS)
                                 .executes(s -> {
-                                    VideoArea area = getArea(s);
+                                    ClientVideoArea area = getArea(s);
                                     if (area == null) return 0;
                                     ClientPacketHandler.createScreen(new VideoScreen(
                                             area,
@@ -239,16 +259,14 @@ public class VideoPlayerClient implements ClientModInitializer {
                                                     s.getArgument("z4", Float.class)
                                             ),
                                             s.getArgument("source", String.class)
-                                            ));
+                                    ));
                                     return 1;
-                                })
-                        )))))))))))))))
-                )
+                                })))))))))))))))))
                 .then(ClientCommandManager.literal("removeScreen")
                         .then(ClientCommandManager.argument("area", StringArgumentType.string()).suggests(SUGGEST_AREAS)
                                 .then(ClientCommandManager.argument("name", StringArgumentType.string()).suggests(SUGGEST_SCREENS)
                                         .executes(s -> {
-                                            VideoArea area = getArea(s);
+                                            ClientVideoArea area = getArea(s);
                                             if (area == null) return 0;
                                             String screenName = s.getArgument("name", String.class);
                                             VideoScreen screen = area.getScreen(screenName);
@@ -258,44 +276,38 @@ public class VideoPlayerClient implements ClientModInitializer {
                                             }
                                             ClientPacketHandler.removeScreen(screen);
                                             return 1;
-                                        })))
-                )
+                                        }))))
                 .then(ClientCommandManager.literal("skipPercent")
                         .then(ClientCommandManager.argument("percent", FloatArgumentType.floatArg(0, 1.01f))
                                 .executes(s -> {
                                     if (checkInvalid(s, true)) return 0;
                                     ClientPacketHandler.skipPercent(currentScreen, s.getArgument("percent", Float.class));
                                     return 1;
-                                })
-                        )
-                )
+                                })))
                 .then(ClientCommandManager.literal("list")
                         .executes(s -> {
                             if (checkInvalid(s, true)) return 0;
-                            String str = currentScreen.infos.stream()
+                            String str = currentScreen.getScreen().infos.stream()
                                     .map(i -> String.format("%s 请求玩家: %s", i.name(), i.playerName()))
                                     .collect(Collectors.joining("\n"));
                             s.getSource().sendFeedback(Text.literal("观影区 %s 屏幕 %s\n%s".formatted(
                                     currentScreen.area.name, currentScreen.name, str.isEmpty() ? "队列无视频" : str
                             )).formatted(Formatting.GOLD));
                             return 1;
-                        })
-                )
+                        }))
                 .then(ClientCommandManager.literal("sync")
                         .executes(s -> {
                             if (checkInvalid(s, true)) return 0;
                             ClientPacketHandler.sync(currentScreen);
                             return 1;
-                        })
-                )
+                        }))
                 .then(ClientCommandManager.literal("idleplay")
                         .then(ClientCommandManager.argument("url", StringArgumentType.greedyString())
                                 .executes(s -> {
                                     if (checkInvalid(s, true)) return 0;
                                     ClientPacketHandler.idlePlay(currentScreen, s.getArgument("url", String.class));
                                     return 1;
-                                }))
-                )
+                                })))
                 .then(ClientCommandManager.literal("brightness")
                         .then(ClientCommandManager.argument("brightness", IntegerArgumentType.integer(0, 100))
                                 .executes(s -> {
@@ -303,14 +315,12 @@ public class VideoPlayerClient implements ClientModInitializer {
                                     s.getSource().sendFeedback(Text.literal("亮度已设置为 " + config.brightness + "%").formatted(Formatting.GREEN));
                                     saveConfig();
                                     return 1;
-                                })
-                        )
-                )
+                                })))
                 .then(ClientCommandManager.literal("slice")
-                        .then(ClientCommandManager.argument("u1", FloatArgumentType.floatArg(0, 1))
-                        .then(ClientCommandManager.argument("v1", FloatArgumentType.floatArg(0, 1))
-                        .then(ClientCommandManager.argument("u2", FloatArgumentType.floatArg(0, 1))
-                        .then(ClientCommandManager.argument("v2", FloatArgumentType.floatArg(0, 1))
+                        .then(ClientCommandManager.argument("u1", FloatArgumentType.floatArg())
+                        .then(ClientCommandManager.argument("v1", FloatArgumentType.floatArg())
+                        .then(ClientCommandManager.argument("u2", FloatArgumentType.floatArg())
+                        .then(ClientCommandManager.argument("v2", FloatArgumentType.floatArg())
                                 .executes(s -> {
                                     if (checkInvalidLooking(s)) return 0;
                                     float u1 = s.getArgument("u1", Float.class);
@@ -319,16 +329,32 @@ public class VideoPlayerClient implements ClientModInitializer {
                                     float v2 = s.getArgument("v2", Float.class);
                                     ClientPacketHandler.slice(currentLooking, u1, v1, u2, v2);
                                     return 1;
-                                })
-                        ))))
-                )
+                                }))))))
                 .then(ClientCommandManager.literal("stop")
                         .executes(s -> {
                             if (checkInvalid(s, true)) return 0;
                             currentScreen.player.stop();
                             return 1;
-                        })
-                )
+                        }))
+                .then(ClientCommandManager.literal("setmeta")
+                        .then(ClientCommandManager.argument("area", StringArgumentType.string()).suggests(SUGGEST_AREAS)
+                                .then(ClientCommandManager.argument("screen", StringArgumentType.string()).suggests(SUGGEST_SCREENS)
+                                        .then(ClientCommandManager.literal("mute")
+                                                .then(ClientCommandManager.argument("mute", BoolArgumentType.bool())
+                                                        .executes(s -> {
+                                                            ClientVideoScreen screen = getScreen(s);
+                                                            if (screen == null) return 0;
+                                                            ClientPacketHandler.setMeta(screen, PacketID.Action.SET_MUTE.ordinal(), s.getArgument("mute", Boolean.class) ? 1 : 0);
+                                                            return 1;
+                                                        })))
+                                        .then(ClientCommandManager.literal("interactable")
+                                                .then(ClientCommandManager.argument("interactable", BoolArgumentType.bool())
+                                                        .executes(s -> {
+                                                            ClientVideoScreen screen = getScreen(s);
+                                                            if (screen == null) return 0;
+                                                            ClientPacketHandler.setMeta(screen, PacketID.Action.SET_INTERACTABLE.ordinal(), s.getArgument("interactable", Boolean.class) ? 1 : 0);
+                                                            return 1;
+                                                        }))))))
         ));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.player == null || client.world == null || client.currentScreen != null || currentLooking == null) return;
@@ -345,19 +371,32 @@ public class VideoPlayerClient implements ClientModInitializer {
         bossBar = new ClientBossBar(UUID.randomUUID(), Text.of(""), 0, BossBar.Color.WHITE, BossBar.Style.PROGRESS, false, false, false);
     }
 
-    private VideoArea getArea(CommandContext<FabricClientCommandSource> s) {
+    private ClientVideoArea getArea(CommandContext<FabricClientCommandSource> s) {
         if (checkInvalid(s, false)) return null;
         String name = s.getArgument("area", String.class);
-        VideoArea area = areas.get(name);
+        ClientVideoArea area = areas.get(name);
         if (area == null) {
-            s.getSource().sendFeedback(Text.literal("没有名为 " + name + " 的区域").formatted(Formatting.RED));
+            s.getSource().sendFeedback(Text.literal("没有名为 " + name + " 的观影区").formatted(Formatting.RED));
             return null;
         }
         return area;
     }
 
+    private ClientVideoScreen getScreen(CommandContext<FabricClientCommandSource> s) {
+        if (checkInvalid(s, false)) return null;
+        ClientVideoArea area = getArea(s);
+        if (area == null) return null;
+        String name = s.getArgument("screen", String.class);
+        ClientVideoScreen screen = area.getScreen(name);
+        if (screen == null) {
+            s.getSource().sendFeedback(Text.literal("屏幕未找到").formatted(Formatting.RED));
+            return null;
+        }
+        return screen;
+    }
+
     private boolean checkInvalid(CommandContext<FabricClientCommandSource> s, boolean checkScreen) {
-        if (!connected) {
+        if (!connected && !config.alwaysConnected) {
             s.getSource().sendFeedback(Text.literal("未连接到服务器").formatted(Formatting.RED));
             return true;
         }
@@ -373,7 +412,7 @@ public class VideoPlayerClient implements ClientModInitializer {
     }
 
     private boolean checkInvalidLooking(CommandContext<FabricClientCommandSource> s) {
-        if (!connected) {
+        if (!connected && !config.alwaysConnected) {
             s.getSource().sendFeedback(Text.literal("未连接到服务器").formatted(Formatting.RED));
             return true;
         }
@@ -386,17 +425,6 @@ public class VideoPlayerClient implements ClientModInitializer {
 
     private void render(WorldRenderContext ctx) {
         Profilers.get().push("video");
-        Profilers.get().push("checkInteract");
-        checkInteract(ctx);
-        Profilers.get().swap("updateBossBar");
-        updateBossBar();
-        Profilers.get().swap("updateFrame");
-        if (!updated) {
-            for (IVideoPlayer player : players) {
-                player.updateTexture();
-            }
-            updated = true;
-        }
         Profilers.get().swap("render");
         MatrixStack matrices = ctx.matrixStack();
         Vec3d camera = ctx.camera().getPos();
@@ -407,10 +435,13 @@ public class VideoPlayerClient implements ClientModInitializer {
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(GL11.GL_LESS);
         RenderSystem.disableCull();
-        for (IVideoPlayer player : players) {
-            player.draw(mat);
+        for (ClientVideoScreen screen : screens) {
+            try {
+                screen.draw(mat);
+            } catch (Exception e) {
+                VideoPlayerMain.LOGGER.info(e.toString());
+            }
         }
-        matrices.pop();
         RenderSystem.enableCull();
         RenderSystem.disableDepthTest();
         Profilers.get().pop();
@@ -424,11 +455,12 @@ public class VideoPlayerClient implements ClientModInitializer {
                 handler.onBossBar(BossBarS2CPacket.add(bossBar));
                 bossBarAdded = true;
             }
-            VideoInfo info = currentLooking.player.getScreen().infos.peek();
-            if (info != null) {
+            ClientVideoScreen screen = currentLooking.getScreen();
+            VideoInfo info = screen.infos.peek();
+            if (info != null && screen.player != null) {
                 String name = info.name();
-                long progress = System.currentTimeMillis() - ((ClientVideoScreen) currentLooking.player.getScreen()).getStartTime();
-                long totalProgress = currentLooking.player.getTotalProgress();
+                long progress = System.currentTimeMillis() - screen.getStartTime();
+                long totalProgress = screen.player.getTotalProgress();
                 String time;
                 if (totalProgress > 0) {
                     boolean showHour = progress >= 3600000 || totalProgress >= 3600000;
@@ -452,31 +484,19 @@ public class VideoPlayerClient implements ClientModInitializer {
         }
     }
 
-    private void checkInteract(WorldRenderContext ctx) {
+    private static void checkInteract() {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client == null) return;
-        if (players.isEmpty()) {
-            isInArea = false;
-            currentLooking = null;
-            currentScreen = null;
+
+        isInArea = false;
+        currentLooking = null;
+        currentScreen = null;
+        if (screens.isEmpty()) {
             touchHandler.handle(null);
             return;
         }
 
-        currentScreen = null;
-        for (ClientVideoArea area : areas.values()) {
-            if (!area.loaded) continue;
-            isInArea = true;
-            for (VideoScreen screen : area.screens) {
-                if (screen instanceof ClientVideoScreen s) {
-                    currentScreen = s;
-                    break;
-                }
-            }
-            break;
-        }
-
-        float delta = ctx.tickCounter().getTickDelta(true);
+        float delta = MinecraftClient.getInstance().getRenderTickCounter().getTickDelta(true);
         Vec3d eyePos = client.player.getCameraPosVec(delta);
         Vec3d lookVec = client.player.getRotationVec(delta);
 
@@ -494,13 +514,34 @@ public class VideoPlayerClient implements ClientModInitializer {
         Vector3f lineEnd = eyePos.add(lookVec.multiply(remoteControl ? remoteControlRange : noControlRange)).toVector3f();
 
         ArrayList<Intersection.Result> list = new ArrayList<>();
-        for (IVideoPlayer player : players) {
-            Intersection.Result result = Intersection.intersect(lineStart, lineEnd, player.getTrackingScreen());
+        for (ClientVideoScreen s : screens) {
+            if (!s.interactable) continue;
+            ClientVideoScreen screen = s.getTrackingScreen();
+            if (screen == null)  continue;
+            Intersection.Result result = Intersection.intersect(lineStart, lineEnd, screen);
             if (result.intersects) list.add(result);
         }
         Intersection.Result target = list.isEmpty() ? null : Collections.min(list, Comparator.comparing(s -> s.distance));
-        currentLooking = target == null || target.player == null ? null : (ClientVideoScreen) target.player;
+        currentLooking = target == null || target.screen == null ? null : target.screen;
         touchHandler.handle(target);
+
+        if (currentLooking != null) {
+            currentScreen = currentLooking;
+            return;
+        }
+
+        currentScreen = null;
+        for (ClientVideoArea area : areas.values()) {
+            if (!area.loaded) continue;
+            isInArea = true;
+            for (VideoScreen screen : area.screens) {
+                if (screen.interactable && screen instanceof ClientVideoScreen s) {
+                    currentScreen = s;
+                    break;
+                }
+            }
+            break;
+        }
     }
 
     public static boolean checkVersion(String v) {
@@ -508,6 +549,23 @@ public class VideoPlayerClient implements ClientModInitializer {
         String[] p2 = StringUtils.split(VideoPlayerMain.version, '.');
         if (p1.length < 2 || p2.length < 2) return false;
         return p1[0].equals(p2[0]) && p1[1].equals(p2[1]);
+    }
+
+    public static void update() {
+        if (rendered) return;
+        rendered = true;
+        Profiler profiler = Profilers.get();
+        profiler.push("video");
+        profiler.push("updateFrame");
+        for (ClientVideoScreen screen : screens) {
+            screen.updateTexture();
+        }
+        profiler.swap("checkInteract");
+        checkInteract();
+        profiler.swap("updateBossBar");
+        updateBossBar();
+        profiler.pop();
+        profiler.pop();
     }
 
     private static String formatDuration(long millis, boolean showHour) {

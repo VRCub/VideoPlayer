@@ -3,7 +3,9 @@ package com.github.squi2rel.vp;
 import com.github.squi2rel.vp.network.ByteBufUtils;
 import com.github.squi2rel.vp.network.ServerPacketHandler;
 import com.github.squi2rel.vp.network.VideoPayload;
+import com.github.squi2rel.vp.provider.LocalPlayerProviderSource;
 import com.github.squi2rel.vp.provider.VideoInfo;
+import com.github.squi2rel.vp.provider.VideoProviders;
 import com.github.squi2rel.vp.video.*;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -13,11 +15,13 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import org.joml.Vector3f;
 
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 import static com.github.squi2rel.vp.VideoPlayerClient.areas;
 import static com.github.squi2rel.vp.network.ByteBufUtils.writeString;
@@ -42,7 +46,34 @@ public class ClientPacketHandler {
                 VideoPlayerClient.connected = true;
                 config(VideoPlayerMain.version);
             }
-            case REQUEST -> areas.get(readName(buf)).getScreen(readName(buf)).play(VideoInfo.read(buf));
+            case REQUEST -> {
+                ClientVideoScreen screen = areas.get(readName(buf)).getScreen(readName(buf));
+                VideoInfo info = VideoInfo.read(buf);
+                ClientPlayerEntity player = MinecraftClient.getInstance().player;
+                if (player == null) return;
+                CompletableFuture<VideoInfo> video = VideoProviders.from(info.rawPath(), new LocalPlayerProviderSource(info.playerName()));
+                if (video == null) {
+                    player.sendMessage(Text.of("无法解析视频源"), false);
+                    return;
+                }
+                CompletableFuture.supplyAsync(() -> {
+                    try {
+                        return video.get();
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }).thenAccept(v -> {
+                    try {
+                        if (v == null) {
+                            player.sendMessage(Text.of("无法解析视频源"), false);
+                            return;
+                        }
+                        MinecraftClient.getInstance().execute(() -> screen.play(info));
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+            }
             case SYNC -> {
                 String areaName = readName(buf);
                 String name = ByteBufUtils.readString(buf, 32);
@@ -56,6 +87,7 @@ public class ClientPacketHandler {
                 for (int i = 0; i < size; i++) {
                     ClientVideoScreen screen = ClientVideoScreen.from(VideoScreen.read(buf, area));
                     ServerPacketHandler.readUV(buf, screen);
+                    screen.readMeta(buf);
                     area.addScreen(screen);
                 }
             }
@@ -87,7 +119,7 @@ public class ClientPacketHandler {
             case SKIP -> {
                 ClientVideoScreen screen = areas.get(readName(buf)).getScreen(readName(buf));
                 if (screen == null) return;
-                VideoPlayer player = (VideoPlayer) screen.player;
+                IVideoPlayer player = screen.player;
                 if (player == null) return;
                 MinecraftClient.getInstance().execute(player::stop);
             }
@@ -106,6 +138,11 @@ public class ClientPacketHandler {
                 ClientVideoScreen screen = areas.get(readName(buf)).getScreen(readName(buf));
                 if (screen == null) return;
                 ServerPacketHandler.readUV(buf, screen);
+            }
+            case SET_META -> {
+                Action action = Action.VALUES[buf.readUnsignedByte()];
+                ClientVideoScreen screen = areas.get(readName(buf)).getScreen(readName(buf));
+                action.apply(screen, buf.readInt());
             }
             default -> LOGGER.warn("Unknown packet type: {}", type);
         }
@@ -217,5 +254,9 @@ public class ClientPacketHandler {
         writeString(buf, screen.area.name);
         writeString(buf, screen.name);
         send(toByteArray(buf));
+    }
+
+    public static void setMeta(VideoScreen screen, int actionId, int value) {
+        send(ServerPacketHandler.setMeta(screen, actionId, value));
     }
 }

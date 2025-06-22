@@ -1,15 +1,21 @@
 package com.github.squi2rel.vp.video;
 
 import com.github.squi2rel.vp.ClientVideoScreen;
-import com.github.squi2rel.vp.provider.VideoInfo;
+import net.minecraft.client.gl.Framebuffer;
+import net.minecraft.client.gl.SimpleFramebuffer;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix4f;
-import org.joml.Vector3f;
 
-public record ClonePlayer(ClientVideoScreen screen, ClientVideoScreen source) implements IVideoPlayer {
+public abstract class AbstractCameraPlayer implements IVideoPlayer {
+    protected ClientVideoScreen screen;
+    protected Framebuffer framebuffer;
+
+    public AbstractCameraPlayer(ClientVideoScreen screen) {
+        this.screen = screen;
+    }
+
     @Override
     public @Nullable ClientVideoScreen screen() {
-        return source;
+        return screen;
     }
 
     @Override
@@ -23,21 +29,18 @@ public record ClonePlayer(ClientVideoScreen screen, ClientVideoScreen source) im
     }
 
     @Override
-    public void play(VideoInfo info) {
+    public void init() {
+        framebuffer = new SimpleFramebuffer(2, 2, true);
     }
 
     @Override
     public void cleanup() {
+        framebuffer.delete();
     }
 
     @Override
     public int getTextureId() {
-        return source.player.getTextureId();
-    }
-
-    @Override
-    public void stop() {
-        if (source.player != null) source.player.stop();
+        return framebuffer.getColorAttachment();
     }
 
     @Override
@@ -64,12 +67,12 @@ public record ClonePlayer(ClientVideoScreen screen, ClientVideoScreen source) im
 
     @Override
     public long getProgress() {
-        return source.player == null ? 0 : source.player.getProgress();
+        return 0;
     }
 
     @Override
     public long getTotalProgress() {
-        return source.player == null ? 0 : source.player.getTotalProgress();
+        return 0;
     }
 
     @Override
@@ -77,27 +80,17 @@ public record ClonePlayer(ClientVideoScreen screen, ClientVideoScreen source) im
     }
 
     @Override
-    public void init() {
-    }
-
-    @Override
     public int getWidth() {
-        return source.player.getWidth();
+        return framebuffer.textureWidth;
     }
 
     @Override
     public int getHeight() {
-        return source.player.getHeight();
+        return framebuffer.textureHeight;
     }
 
     @Override
-    public void updateTexture() {
-    }
-
-    @Override
-    public void draw(Matrix4f mat, int id, Vector3f p1, Vector3f p2, Vector3f p3, Vector3f p4, float u1, float v1, float u2, float v2) {
-        boolean fx = source.player.flippedX();
-        boolean fy = source.player.flippedY();
-        IVideoPlayer.super.draw(mat, id, p1, p2, p3, p4, fx ? u2 : u1, fy ? v2 : v1, fx ? u1 : u2, fy ? v1 : v2);
+    public boolean flippedY() {
+        return true;
     }
 }

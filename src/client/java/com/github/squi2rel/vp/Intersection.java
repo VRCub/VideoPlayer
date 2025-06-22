@@ -1,10 +1,9 @@
 package com.github.squi2rel.vp;
 
-import com.github.squi2rel.vp.video.VideoScreen;
 import org.joml.Vector3f;
 
 public class Intersection {
-    public static Result intersect(Vector3f lineStart, Vector3f lineEnd, VideoScreen player) {
+    public static Result intersect(Vector3f lineStart, Vector3f lineEnd, ClientVideoScreen player) {
         Vector3f p1 = player.p1, p2 = player.p2, p3 = player.p3, p4 = player.p4;
 
         Result result = new Result();
@@ -30,7 +29,7 @@ public class Intersection {
         if (inTri(result.point, p1, p2, p3) || inTri(result.point, p1, p3, p4)) {
             result.intersects = true;
             result.distance = distance;
-            result.player = player;
+            result.screen = player;
         }
 
         return result;
@@ -62,7 +61,7 @@ public class Intersection {
         public boolean intersects;
         public Vector3f point;
         public float distance;
-        public VideoScreen player;
+        public ClientVideoScreen screen;
 
         public Result() {
             this.intersects = false;

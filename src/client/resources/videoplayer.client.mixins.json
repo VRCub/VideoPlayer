@@ -2,9 +2,14 @@
   "required": true,
   "package": "com.github.squi2rel.vp.mixin.client",
   "compatibilityLevel": "JAVA_21",
+  "refmap": "client-videoplayer-refmap.json",
   "client": [
     "ClientPlayNetworkHandlerMixin",
-    "MinecraftClientMixin"
+    "GameRendererAccessor",
+    "LivingEntityRendererMixin",
+    "MinecraftClientAccessor",
+    "MinecraftClientMixin",
+    "WorldRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

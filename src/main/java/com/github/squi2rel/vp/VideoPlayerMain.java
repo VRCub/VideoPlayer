@@ -34,13 +34,13 @@ public class VideoPlayerMain implements ModInitializer {
 	public void onInitialize() {
 		Path gameDir = FabricLoader.getInstance().getGameDir();
 		libDir = gameDir.resolve("mods").resolve("VideoPlayer-vlc");
-		if (!libDir.toFile().exists()) throw new RuntimeException("Could not find vlc directory");
+		if (!libDir.toFile().exists()) throw new RuntimeException("Could not find vlc directory! Download at https://github.com/squi2rel/VideoPlayer-Library/releases/tag/vlc4 and unzip into mods");
 		StreamListener.load();
 		VideoProviders.register();
 		VideoPayload.register();
 		ServerLifecycleEvents.SERVER_STARTED.register(DataHolder::load);
 		ServerLifecycleEvents.SERVER_STOPPING.register(DataHolder::stop);
-		ServerTickEvents.START_WORLD_TICK.register(s -> DataHolder.update(s.getServer()));
+		ServerTickEvents.START_WORLD_TICK.register(s -> DataHolder.update());
 		ServerPlayConnectionEvents.JOIN.register((e, p, s) -> DataHolder.playerJoin(e.player));
 		ServerPlayConnectionEvents.DISCONNECT.register((e, s) -> DataHolder.playerLeave(e.player.getUuid()));
 		ServerPlayNetworking.registerGlobalReceiver(VideoPayload.ID, (p, c) -> c.server().execute(() -> {

@@ -12,7 +12,7 @@ import java.util.List;
 
 @Mixin(DirectoryProviderDiscoveryStrategy.class)
 public class VlcJMixin {
-    @Inject(at = @At("HEAD"), method = "getSupportedProviders", cancellable = true, remap = false)
+    @Inject(method = "getSupportedProviders", at = @At("HEAD"), cancellable = true, remap = false)
     protected void getSupportedProviders(CallbackInfoReturnable<List<DiscoveryDirectoryProvider>> cir) {
         cir.setReturnValue(List.of(new DiscoveryDirectoryProvider() {
             @Override

@@ -27,8 +27,10 @@ public class DataHolder {
     private static final Gson gson = new Gson();
     private static final ReentrantLock lock = new ReentrantLock();
 
-    public static void update(MinecraftServer s) {
-        PlayerManager pm = s.getPlayerManager();
+    public static MinecraftServer server;
+
+    public static void update() {
+        PlayerManager pm = server.getPlayerManager();
         lock();
         for (UUID uuid : allPlayers) {
             ServerPlayerEntity player = pm.getPlayer(uuid);
@@ -68,7 +70,7 @@ public class DataHolder {
                 }
             }
         }
-        for (ServerPlayerEntity player : PlayerLookup.all(s)) {
+        for (ServerPlayerEntity player : PlayerLookup.all(server)) {
             playerDim.put(player.getUuid(), player.getServerWorld().getRegistryKey().getValue().toString());
         }
         unlock();
@@ -132,6 +134,7 @@ public class DataHolder {
     }
 
     public static void load(MinecraftServer server) {
+        DataHolder.server = server;
         lock();
         try {
             config = gson.fromJson(readString(configPath), ServerConfig.class);
@@ -141,7 +144,7 @@ public class DataHolder {
         }
         for (VideoArea area : config.areas) {
             area.initServer();
-            area.afterLoad(server);
+            area.afterLoad();
             areas.computeIfAbsent(area.dim, k -> new HashMap<>()).put(area.name, area);
         }
         config.areas = null;

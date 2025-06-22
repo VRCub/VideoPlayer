@@ -8,7 +8,7 @@ import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
-public class StreamListener {
+public class StreamListener implements IVideoListener {
     public static MediaPlayerFactory factory;
     private final Object syncLock = new Object();
     private MediaPlayer player;
@@ -67,44 +67,58 @@ public class StreamListener {
         });
     }
 
+    public static boolean accept(VideoInfo info) {
+        return !info.path().isEmpty();
+    }
+
+    public static void load() {
+        StreamListener.factory = new MediaPlayerFactory("--no-video", "--aout=none", "--no-xlib", "--intf=dummy", "--quiet");
+    }
+
+    @Override
     public long getProgress() {
         return player.status().time();
     }
 
+    @Override
     public boolean isPlaying() {
         return player.status().isPlaying();
     }
 
+    @Override
     public void playing(Consumer<Boolean> playing) {
         this.playing = playing;
     }
 
+    @Override
     public void stopped(Runnable stopped) {
         this.stopped = stopped;
     }
 
+    @Override
     public void errored(Runnable errored) {
         this.errored = errored;
     }
 
+    @Override
     public void timeout(Runnable timeout) {
         this.timeout = timeout;
     }
 
+    @Override
     public void listen() {
-        player.media().play(info.path(), info.vlcParams());
+        player.media().play(info.path(), info.params());
     }
 
+    @Override
     public void cancel() {
         synchronized (syncLock) {
             MediaPlayer p = player;
             player = null;
             p.controls().stopAsync();
-            p.release();
+            Thread t = new Thread(p::release);
+            t.setDaemon(true);
+            t.start();
         }
-    }
-
-    public static void load() {
-        factory = new MediaPlayerFactory("--no-video", "--aout=none", "--no-xlib", "--intf=dummy", "--quiet");
     }
 }

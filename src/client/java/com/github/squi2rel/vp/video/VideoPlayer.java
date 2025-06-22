@@ -3,7 +3,7 @@ package com.github.squi2rel.vp.video;
 import com.github.squi2rel.vp.ClientVideoScreen;
 import com.github.squi2rel.vp.provider.VideoInfo;
 import net.minecraft.client.MinecraftClient;
-import org.joml.Matrix4f;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
 import java.nio.ByteBuffer;
@@ -30,19 +30,18 @@ public class VideoPlayer implements IVideoPlayer {
     }
 
     @Override
-    public VideoScreen getScreen() {
+    public @Nullable ClientVideoScreen screen() {
         return screen;
     }
 
     @Override
-    public VideoScreen getTrackingScreen() {
+    public @Nullable ClientVideoScreen getTrackingScreen() {
         return screen;
     }
 
     @Override
     public void updateTexture() {
-        if (changed) return;
-        if (!initialized) throw new IllegalStateException("not initialized");
+        if (changed || !initialized) return;
         ByteBuffer buf = decoder.decodeNextFrame();
         if (buf == null || buf.capacity() == 0) return;
         quad.updateTexture(buf);
@@ -67,6 +66,16 @@ public class VideoPlayer implements IVideoPlayer {
         quad = new VideoQuad(decoder.getWidth(), decoder.getHeight());
 
         initialized = true;
+    }
+
+    @Override
+    public int getWidth() {
+        return videoWidth;
+    }
+
+    @Override
+    public int getHeight() {
+        return videoHeight;
     }
 
     @Override
@@ -141,31 +150,6 @@ public class VideoPlayer implements IVideoPlayer {
     @Override
     public void setTargetTime(long targetTime) {
         this.targetTime = targetTime;
-    }
-
-    @Override
-    public void draw(Matrix4f mat) {
-        float sx = p1.sub(p4, tmp1).length() / (videoWidth * Math.abs(screen.u1 - screen.u2));
-        float sy = p1.sub(p2, tmp1).length() / (videoHeight * Math.abs(screen.v1 - screen.v2));
-        boolean vertical;
-        float scale;
-        if (sx < sy) {
-            scale = sx / sy;
-            vertical = true;
-        } else {
-            scale = sy / sx;
-            vertical = false;
-        }
-        if (scale == 1) {
-            draw(mat, getTextureId(), p1, p2, p3, p4, screen.u1, screen.v1, screen.u2, screen.v2);
-            return;
-        }
-        float inv = (1 - scale) / 2;
-        if (vertical) {
-            draw(mat, getTextureId(), p1.lerp(p2, inv, tmp1), p2.lerp(p1, inv, tmp2), p3.lerp(p4, inv, tmp3), p4.lerp(p3, inv, tmp4), screen.u1, screen.v1, screen.u2, screen.v2);
-        } else {
-            draw(mat, getTextureId(), p1.lerp(p4, inv, tmp1), p2.lerp(p3, inv, tmp2), p3.lerp(p2, inv, tmp3), p4.lerp(p1, inv, tmp4), screen.u1, screen.v1, screen.u2, screen.v2);
-        }
     }
 
     @Override

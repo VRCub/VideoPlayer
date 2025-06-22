@@ -14,6 +14,7 @@ public class VideoProviders {
     public static void register() {
         providers.add(new BiliBiliVideoProvider());
         providers.add(new BiliBiliLiveProvider());
+        providers.add(new PlayerNameProvider());
         providers.add(new NetworkProvider());
     }
 

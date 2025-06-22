@@ -1,5 +1,9 @@
 package com.github.squi2rel.vp.network;
 
+import com.github.squi2rel.vp.video.VideoScreen;
+
+import java.util.function.BiConsumer;
+
 public class PacketID {
     public static final int
     CONFIG = 0,
@@ -17,5 +21,23 @@ public class PacketID {
     EXECUTE = 12,
     IDLE_PLAY = 13,
     SLICE = 14,
-    OPEN_MENU = 15;
+    OPEN_MENU = 15,
+    SET_META = 16;
+
+    public enum Action {
+        SET_MUTE((v, i) -> v.muted = i != 0),
+        SET_INTERACTABLE((v, i) -> v.interactable = i != 0);
+
+        public static final Action[] VALUES = values();
+
+        private final BiConsumer<VideoScreen, Integer> action;
+
+        Action(BiConsumer<VideoScreen, Integer> action) {
+            this.action = action;
+        }
+
+        public void apply(VideoScreen screen, Integer i) {
+            action.accept(screen, i);
+        }
+    }
 }

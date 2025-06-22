@@ -78,7 +78,7 @@ public class ServerPacketHandler {
                 VideoArea area = getArea(player, readName(buf));
                 if (area == null) return;
                 VideoScreen screen = VideoScreen.read(buf, area);
-                screen.initServer(player.getServer());
+                screen.initServer();
                 DataHolder.lock();
                 area.addScreen(screen);
                 if (area.hasPlayer()) {
@@ -149,6 +149,25 @@ public class ServerPacketHandler {
                 if (area == null) return;
                 VideoScreen screen = area.getScreen(readName(buf));
                 if (screen == null) return;
+            }
+            case SET_META -> {
+                short id = buf.readUnsignedByte();
+                if (id > Action.VALUES.length) {
+                    player.networkHandler.disconnect(Text.of("Unknown action type: " + id));
+                    return;
+                }
+                Action action = Action.VALUES[id];
+                VideoArea area = getArea(player, readName(buf));
+                if (area == null) return;
+                VideoScreen screen = area.getScreen(readName(buf));
+                if (screen == null) return;
+                int value = buf.readInt();
+                action.apply(screen, value);
+                if (area.hasPlayer()) {
+                    byte[] data = setMeta(screen, id, value);
+                    PlayerManager pm = Objects.requireNonNull(player.getServer()).getPlayerManager();
+                    area.forEachPlayer(p -> sendTo(pm.getPlayer(p), data));
+                }
             }
             default -> player.networkHandler.disconnect(Text.of("Unknown packet type: " + type));
         }
@@ -274,6 +293,7 @@ public class ServerPacketHandler {
         for (VideoScreen screen : screens) {
             VideoScreen.write(buf, screen);
             writeUV(buf, screen);
+            screen.writeMeta(buf);
         }
         return toByteArray(buf);
     }
@@ -340,6 +360,15 @@ public class ServerPacketHandler {
         buf.writeFloat(v1);
         buf.writeFloat(u2);
         buf.writeFloat(v2);
+        return toByteArray(buf);
+    }
+
+    public static byte[] setMeta(VideoScreen screen, int actionId, int value) {
+        ByteBuf buf = create(SET_META);
+        buf.writeByte(actionId);
+        writeString(buf, screen.area.name);
+        writeString(buf, screen.name);
+        buf.writeInt(value);
         return toByteArray(buf);
     }
 }

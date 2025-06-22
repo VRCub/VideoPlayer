@@ -2,6 +2,7 @@ package com.github.squi2rel.vp;
 
 import com.github.squi2rel.vp.provider.VideoInfo;
 import com.github.squi2rel.vp.video.*;
+import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 import java.util.Objects;
@@ -23,34 +24,55 @@ public class ClientVideoScreen extends VideoScreen {
         }
     }
 
+    public ClientVideoScreen getScreen() {
+        return player == null ? this : player.screen();
+    }
+
+    public void cleanup() {
+        if (player != null) player.cleanup();
+    }
+
+    public void draw(Matrix4f mat) {
+        if (player != null) player.draw(mat, this);
+    }
+
+    public void updateTexture() {
+        if (player != null) player.updateTexture();
+    }
+
+    public ClientVideoScreen getTrackingScreen() {
+        return player == null ? this : player.getTrackingScreen();
+    }
+
     public void load() {
+        VideoPlayerClient.screens.add(this);
         if (source.isEmpty()) {
-            VideoPlayer p = new VideoPlayer(this, p1, p2, p3, p4);
-            p.init();
-            player = p;
-            VideoPlayerClient.players.add(p);
-            if (toPlay != null) {
-                startTime = System.currentTimeMillis() - toSeek;
-                p.setTargetTime(toSeek);
-                p.play(toPlay);
-                toPlay = null;
-            } else {
-                startTime = System.currentTimeMillis();
-            }
-        } else {
-            ClientVideoScreen parent = (ClientVideoScreen) area.screens.stream().filter(v -> Objects.equals(v.name, source)).findAny().orElseThrow();
-            ((ClientVideoArea) area).afterLoad(() -> {
-                player = new ClonePlayer(this, p1, p2, p3, p4, (VideoPlayer) parent.player);
-                VideoPlayerClient.players.add(player);
-            });
+            if (toPlay != null) play(toPlay);
+            return;
         }
+        ClientVideoScreen parent = (ClientVideoScreen) area.screens.stream().filter(v -> Objects.equals(v.name, source)).findAny().orElseThrow();
+        ((ClientVideoArea) area).afterLoad(() -> player = new ClonePlayer(this, parent));
     }
 
     public void play(VideoInfo info) {
-        if (player == null) return;
-        reset();
-        player.setTargetTime(-1);
-        player.play(info);
+        if (source.isEmpty()) {
+            IVideoPlayer old = player;
+            player = VideoPlayers.from(info, this, player);
+            if (player == null) return;
+            if (player != old) {
+                if (old != null) old.cleanup();
+                player.init();
+            }
+            if (toSeek > 0) {
+                startTime = System.currentTimeMillis() - toSeek;
+                player.setTargetTime(toSeek);
+                toSeek = -1;
+            } else {
+                player.setTargetTime(-1);
+                startTime = System.currentTimeMillis();
+            }
+            player.play(info);
+        }
     }
 
     public void setToPlay(VideoInfo info) {
@@ -65,14 +87,9 @@ public class ClientVideoScreen extends VideoScreen {
         return startTime;
     }
 
-    private void reset() {
-        toSeek = -1;
-        startTime = System.currentTimeMillis();
-    }
-
     public void unload() {
-        VideoPlayerClient.players.remove(player);
-        if (player instanceof VideoPlayer vp) vp.cleanup();
+        VideoPlayerClient.screens.remove(this);
+        if (player != null) player.cleanup();
     }
 
     public static ClientVideoScreen from(VideoScreen screen) {

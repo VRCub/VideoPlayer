@@ -2,7 +2,6 @@ package com.github.squi2rel.vp.video;
 
 import com.github.squi2rel.vp.network.ByteBufUtils;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.Vec3d;
 import org.joml.Vector3f;
 
@@ -26,10 +25,10 @@ public class VideoArea {
         this.dim = dim;
     }
 
-    public void afterLoad(MinecraftServer server) {
+    public void afterLoad() {
         for (VideoScreen screen : screens) {
             screen.area = this;
-            screen.initServer(server);
+            screen.initServer();
         }
     }
 
