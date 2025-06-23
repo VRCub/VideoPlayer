@@ -17,6 +17,7 @@ public class CameraRenderer {
     private static final MinecraftClient client = MinecraftClient.getInstance();
     private static final Pool pool = new Pool(3);
     private static final Camera camera = new Camera();
+    public static boolean rendering = false;
     public static boolean renderSelf = false;
 
     public static void renderWorld(Entity player, Framebuffer framebuffer, int fov) {
@@ -36,11 +37,13 @@ public class CameraRenderer {
         Framebuffer old = access.getFramebuffer();
         access.setFramebuffer(framebuffer);
         framebuffer.beginWrite(true);
+        rendering = true;
         renderSelf = player != client.player;
         ((GameRendererAccessor) client.gameRenderer).setCamera(camera);
         client.worldRenderer.render(pool, client.getRenderTickCounter(), false, camera, client.gameRenderer, mat, proj);
         ((GameRendererAccessor) client.gameRenderer).setCamera(c);
         renderSelf = false;
+        rendering = false;
         RenderSystem.colorMask(false, false, false, true);
         framebuffer.setClearColor(0, 0, 0, 1);
         framebuffer.clear();

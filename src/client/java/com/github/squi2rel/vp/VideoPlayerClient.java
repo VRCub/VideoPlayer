@@ -540,7 +540,6 @@ public class VideoPlayerClient implements ClientModInitializer {
                     break;
                 }
             }
-            break;
         }
     }
 
