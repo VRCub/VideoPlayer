@@ -11,6 +11,7 @@ import com.mojang.brigadier.arguments.*;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.suggestion.Suggestions;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -129,7 +130,14 @@ public class VideoPlayerClient implements ClientModInitializer {
         });
         WorldRenderEvents.END.register(e -> VideoPlayerClient.update());
         WorldRenderEvents.LAST.register(this::render);
-        ClientPlayNetworking.registerGlobalReceiver(VideoPayload.ID, (p, c) -> MinecraftClient.getInstance().execute(() -> ClientPacketHandler.handle(Unpooled.wrappedBuffer(p.data()))));
+        ClientPlayNetworking.registerGlobalReceiver(VideoPayload.ID, (p, c) -> MinecraftClient.getInstance().execute(() -> {
+            ByteBuf buf = Unpooled.wrappedBuffer(p.data());
+            try {
+                ClientPacketHandler.handle(buf);
+            } finally {
+                buf.release();
+            }
+        }));
         ClientCommandRegistrationCallback.EVENT.register((d, c) -> d.register(ClientCommandManager.literal("vlc")
                 .then(ClientCommandManager.literal("play")
                         .then(ClientCommandManager.argument("url", StringArgumentType.greedyString())

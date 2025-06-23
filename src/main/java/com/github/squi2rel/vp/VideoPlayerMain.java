@@ -5,6 +5,7 @@ import com.github.squi2rel.vp.network.VideoPayload;
 import com.github.squi2rel.vp.provider.VideoProviders;
 import com.github.squi2rel.vp.video.StreamListener;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import net.fabricmc.api.ModInitializer;
 
@@ -44,10 +45,13 @@ public class VideoPlayerMain implements ModInitializer {
 		ServerPlayConnectionEvents.JOIN.register((e, p, s) -> DataHolder.playerJoin(e.player));
 		ServerPlayConnectionEvents.DISCONNECT.register((e, s) -> DataHolder.playerLeave(e.player.getUuid()));
 		ServerPlayNetworking.registerGlobalReceiver(VideoPayload.ID, (p, c) -> c.server().execute(() -> {
+			ByteBuf buf = Unpooled.wrappedBuffer(p.data());
 			try {
-				ServerPacketHandler.handle(c.player(), Unpooled.wrappedBuffer(p.data()));
+				ServerPacketHandler.handle(c.player(), buf);
 			} catch (Exception e) {
 				c.player().networkHandler.disconnect(Text.of(e.toString()));
+			} finally {
+				buf.release();
 			}
 		}));
 		CommandRegistrationCallback.EVENT.register((d, c, e) -> d.register(CommandManager.literal("").then(CommandManager.argument("command", StringArgumentType.greedyString()).executes(s -> {
