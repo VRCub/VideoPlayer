@@ -3,7 +3,7 @@ package com.github.squi2rel.vp;
 import com.github.squi2rel.vp.network.ByteBufUtils;
 import com.github.squi2rel.vp.network.ServerPacketHandler;
 import com.github.squi2rel.vp.network.VideoPayload;
-import com.github.squi2rel.vp.provider.LocalPlayerProviderSource;
+import com.github.squi2rel.vp.provider.NamedProviderSource;
 import com.github.squi2rel.vp.provider.VideoInfo;
 import com.github.squi2rel.vp.provider.VideoProviders;
 import com.github.squi2rel.vp.video.*;
@@ -51,7 +51,7 @@ public class ClientPacketHandler {
                 VideoInfo info = VideoInfo.read(buf);
                 ClientPlayerEntity player = MinecraftClient.getInstance().player;
                 if (player == null) return;
-                CompletableFuture<VideoInfo> video = VideoProviders.from(info.rawPath(), new LocalPlayerProviderSource(info.playerName()));
+                CompletableFuture<VideoInfo> video = VideoProviders.from(info.rawPath(), new NamedProviderSource(info.playerName()));
                 if (video == null) {
                     player.sendMessage(Text.of("无法解析视频源"), false);
                     return;
@@ -68,7 +68,7 @@ public class ClientPacketHandler {
                             player.sendMessage(Text.of("无法解析视频源"), false);
                             return;
                         }
-                        MinecraftClient.getInstance().execute(() -> screen.play(info));
+                        MinecraftClient.getInstance().execute(() -> screen.play(new VideoInfo(info.playerName(), info.name(), v.path(), v.rawPath(), v.expire(), v.seekable(), v.params())));
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -143,6 +143,7 @@ public class ClientPacketHandler {
                 Action action = Action.VALUES[buf.readUnsignedByte()];
                 ClientVideoScreen screen = areas.get(readName(buf)).getScreen(readName(buf));
                 action.apply(screen, buf.readInt());
+                screen.metaChanged();
             }
             default -> LOGGER.warn("Unknown packet type: {}", type);
         }

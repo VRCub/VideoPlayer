@@ -5,6 +5,7 @@
   "refmap": "client-videoplayer-refmap.json",
   "client": [
     "ClientPlayNetworkHandlerMixin",
+    "ClientWorldAccessor",
     "GameRendererAccessor",
     "GameRendererMixin",
     "LivingEntityRendererMixin",

@@ -88,7 +88,7 @@ public class VideoPlayerClient implements ClientModInitializer {
         ClientVideoArea area = areas.get(context.getArgument("area", String.class));
         if (area == null) return Suggestions.empty();
         for (VideoScreen screen : area.screens) {
-            if (!screen.interactable) continue;
+            if (!((ClientVideoScreen) screen).interactable) continue;
             if (screen.name.startsWith(builder.getRemaining())) {
                 builder.suggest("\"" + screen.name.replace("\\", "\\\\") + "\"");
             }
@@ -100,7 +100,7 @@ public class VideoPlayerClient implements ClientModInitializer {
         ClientVideoArea area = areas.get(context.getArgument("area", String.class));
         if (area == null) return Suggestions.empty();
         for (VideoScreen screen : area.screens) {
-            if (!screen.source.isEmpty() || !screen.interactable) continue;
+            if (!screen.source.isEmpty() || !((ClientVideoScreen) screen).interactable) continue;
             if (screen.name.startsWith(builder.getRemaining())) {
                 builder.suggest("\"" + screen.name.replace("\\", "\\\\") + "\"");
             }
@@ -352,7 +352,7 @@ public class VideoPlayerClient implements ClientModInitializer {
                                                         .executes(s -> {
                                                             ClientVideoScreen screen = getScreen(s);
                                                             if (screen == null) return 0;
-                                                            ClientPacketHandler.setMeta(screen, PacketID.Action.SET_MUTE.ordinal(), s.getArgument("mute", Boolean.class) ? 1 : 0);
+                                                            ClientPacketHandler.setMeta(screen, PacketID.Action.MUTE.ordinal(), s.getArgument("mute", Boolean.class) ? 1 : 0);
                                                             return 1;
                                                         })))
                                         .then(ClientCommandManager.literal("interactable")
@@ -360,9 +360,29 @@ public class VideoPlayerClient implements ClientModInitializer {
                                                         .executes(s -> {
                                                             ClientVideoScreen screen = getScreen(s);
                                                             if (screen == null) return 0;
-                                                            ClientPacketHandler.setMeta(screen, PacketID.Action.SET_INTERACTABLE.ordinal(), s.getArgument("interactable", Boolean.class) ? 1 : 0);
+                                                            ClientPacketHandler.setMeta(screen, PacketID.Action.INTERACTABLE.ordinal(), s.getArgument("interactable", Boolean.class) ? 1 : 0);
                                                             return 1;
-                                                        }))))))
+                                                        })))
+                                        .then(ClientCommandManager.literal("size")
+                                                .then(ClientCommandManager.argument("width", IntegerArgumentType.integer(2, 4095))
+                                                        .then(ClientCommandManager.argument("height", IntegerArgumentType.integer(2, 4095))
+                                                                .executes(s -> {
+                                                                    ClientVideoScreen screen = getScreen(s);
+                                                                    if (screen == null) return 0;
+                                                                    int width = s.getArgument("width", Integer.class);
+                                                                    int height = s.getArgument("height", Integer.class);
+                                                                    ClientPacketHandler.setMeta(screen, PacketID.Action.SIZE.ordinal(), width << 12 | height);
+                                                                    return 1;
+                                                                }))))
+                                        .then(ClientCommandManager.literal("fov")
+                                                .then(ClientCommandManager.argument("fov", IntegerArgumentType.integer(1, 179))
+                                                        .executes(s -> {
+                                                            ClientVideoScreen screen = getScreen(s);
+                                                            if (screen == null) return 0;
+                                                            ClientPacketHandler.setMeta(screen, PacketID.Action.FOV.ordinal(), s.getArgument("fov", Integer.class));
+                                                            return 1;
+                                                        })))
+                                )))
         ));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.player == null || client.world == null || client.currentScreen != null || currentLooking == null) return;
@@ -432,6 +452,7 @@ public class VideoPlayerClient implements ClientModInitializer {
     }
 
     private void render(WorldRenderContext ctx) {
+        if (CameraRenderer.rendering) return;
         Profilers.get().push("video");
         Profilers.get().swap("render");
         MatrixStack matrices = ctx.matrixStack();
@@ -543,7 +564,8 @@ public class VideoPlayerClient implements ClientModInitializer {
             if (!area.loaded) continue;
             isInArea = true;
             for (VideoScreen screen : area.screens) {
-                if (screen.interactable && screen instanceof ClientVideoScreen s) {
+                ClientVideoScreen s = (ClientVideoScreen) screen;
+                if (s.interactable) {
                     currentScreen = s;
                     break;
                 }

@@ -162,6 +162,10 @@ public class ServerPacketHandler {
                 VideoScreen screen = area.getScreen(readName(buf));
                 if (screen == null) return;
                 int value = buf.readInt();
+                if (!action.verify(value)) {
+                    player.networkHandler.disconnect(Text.of("Invalid value: " + value));
+                    return;
+                }
                 action.apply(screen, value);
                 if (area.hasPlayer()) {
                     byte[] data = setMeta(screen, id, value);

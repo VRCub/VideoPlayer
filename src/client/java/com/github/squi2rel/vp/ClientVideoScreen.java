@@ -2,6 +2,7 @@ package com.github.squi2rel.vp;
 
 import com.github.squi2rel.vp.provider.VideoInfo;
 import com.github.squi2rel.vp.video.*;
+import io.netty.buffer.ByteBuf;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
@@ -12,6 +13,7 @@ public class ClientVideoScreen extends VideoScreen {
     private VideoInfo toPlay = null;
     private long toSeek = -1;
     private long startTime = System.currentTimeMillis();
+    public boolean interactable = true;
 
     public ClientVideoScreen(VideoArea area, String name, Vector3f v1, Vector3f v2, Vector3f v3, Vector3f v4, String source) {
         super(area, name, v1, v2, v3, v4, source);
@@ -22,6 +24,17 @@ public class ClientVideoScreen extends VideoScreen {
         for (VideoInfo info : target) {
             infos.offer(info);
         }
+    }
+
+    @Override
+    public void readMeta(ByteBuf buf) {
+        super.readMeta(buf);
+        interactable = meta.getOrDefault("interactable", 1) != 0;
+        metaChanged();
+    }
+
+    public void metaChanged() {
+        if (player instanceof MetaListener m) m.onMetaChanged();
     }
 
     public ClientVideoScreen getScreen() {
@@ -62,6 +75,7 @@ public class ClientVideoScreen extends VideoScreen {
             if (player != old) {
                 if (old != null) old.cleanup();
                 player.init();
+                if (player instanceof MetaListener m) m.onMetaChanged();
             }
             if (toSeek > 0) {
                 startTime = System.currentTimeMillis() - toSeek;

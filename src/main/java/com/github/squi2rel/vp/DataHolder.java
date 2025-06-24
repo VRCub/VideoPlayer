@@ -2,6 +2,7 @@ package com.github.squi2rel.vp;
 
 import com.github.squi2rel.vp.network.ServerPacketHandler;
 import com.github.squi2rel.vp.video.VideoArea;
+import com.github.squi2rel.vp.video.VideoScreen;
 import com.google.gson.Gson;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.fabricmc.loader.api.FabricLoader;
@@ -143,6 +144,9 @@ public class DataHolder {
             save();
         }
         for (VideoArea area : config.areas) {
+            for (VideoScreen screen : area.screens) {
+                if (screen.meta == null) screen.meta = new HashMap<>();
+            }
             area.initServer();
             area.afterLoad();
             areas.computeIfAbsent(area.dim, k -> new HashMap<>()).put(area.name, area);

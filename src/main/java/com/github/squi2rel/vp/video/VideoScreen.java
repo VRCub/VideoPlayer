@@ -26,9 +26,8 @@ public class VideoScreen {
     public float u1 = 0, v1 = 0, u2 = 1, v2 = 1;
     public String source;
     public float skipPercent = 0.5f;
-    public ArrayDeque<VideoInfo> infos = new ArrayDeque<>();
-    public boolean muted = false;
-    public boolean interactable = true;
+    public Map<String, Integer> meta = new HashMap<>();
+    public transient ArrayDeque<VideoInfo> infos = new ArrayDeque<>();
     private transient IVideoListener now;
     private transient CompletableFuture<IVideoListener> nextTask;
     private transient HashSet<UUID> skipped;
@@ -45,13 +44,20 @@ public class VideoScreen {
     }
 
     public void readMeta(ByteBuf buf) {
-        muted = buf.readBoolean();
-        interactable = buf.readBoolean();
+        short size = buf.readUnsignedByte();
+        Map<String, Integer> map = new HashMap<>();
+        for (int i = 0; i < size; i++) {
+            map.put(ByteBufUtils.readString(buf, 32), buf.readInt());
+        }
+        meta = map;
     }
 
     public void writeMeta(ByteBuf buf) {
-        buf.writeBoolean(muted);
-        buf.writeBoolean(interactable);
+        buf.writeByte(meta.size());
+        for (Map.Entry<String, Integer> entry : meta.entrySet()) {
+            ByteBufUtils.writeString(buf, entry.getKey());
+            buf.writeInt(entry.getValue());
+        }
     }
 
     public void syncInfo() {
@@ -64,6 +70,7 @@ public class VideoScreen {
 
     public void initServer() {
         skipped = new HashSet<>();
+        infos = new ArrayDeque<>();
         lock = new ReentrantLock();
         playNext();
     }

@@ -2,6 +2,7 @@ package com.github.squi2rel.vp;
 
 import com.github.squi2rel.vp.mixin.client.GameRendererAccessor;
 import com.github.squi2rel.vp.mixin.client.MinecraftClientAccessor;
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.ProjectionType;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.MinecraftClient;
@@ -20,10 +21,10 @@ public class CameraRenderer {
     public static boolean rendering = false;
     public static boolean renderSelf = false;
 
-    public static void renderWorld(Entity player, Framebuffer framebuffer, int fov) {
+    public static void renderWorld(Entity entity, Framebuffer framebuffer, int fov) {
         if (client.world == null) return;
         Camera c = client.gameRenderer.getCamera();
-        camera.update(client.world, player, false, false, client.getRenderTickCounter().getTickDelta(true));
+        camera.update(client.world, entity, false, false, client.getRenderTickCounter().getTickDelta(true));
         camera.updateEyeHeight();
         Matrix4f proj = client.gameRenderer.getBasicProjectionMatrix(fov);
         MatrixStack matrices = new MatrixStack();
@@ -38,7 +39,7 @@ public class CameraRenderer {
         access.setFramebuffer(framebuffer);
         framebuffer.beginWrite(true);
         rendering = true;
-        renderSelf = player != client.player;
+        renderSelf = entity != client.player;
         ((GameRendererAccessor) client.gameRenderer).setCamera(camera);
         client.worldRenderer.render(pool, client.getRenderTickCounter(), false, camera, client.gameRenderer, mat, proj);
         ((GameRendererAccessor) client.gameRenderer).setCamera(c);
@@ -50,5 +51,6 @@ public class CameraRenderer {
         RenderSystem.colorMask(true, true, true, true);
         framebuffer.endWrite();
         access.setFramebuffer(old);
+        GlStateManager._viewport(0, 0, old.viewportWidth, old.viewportHeight);
     }
 }
