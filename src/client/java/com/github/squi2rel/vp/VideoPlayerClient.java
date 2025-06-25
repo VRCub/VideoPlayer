@@ -364,8 +364,8 @@ public class VideoPlayerClient implements ClientModInitializer {
                                                             return 1;
                                                         })))
                                         .then(ClientCommandManager.literal("size")
-                                                .then(ClientCommandManager.argument("width", IntegerArgumentType.integer(2, 4095))
-                                                        .then(ClientCommandManager.argument("height", IntegerArgumentType.integer(2, 4095))
+                                                .then(ClientCommandManager.argument("width", IntegerArgumentType.integer(1, 4095))
+                                                        .then(ClientCommandManager.argument("height", IntegerArgumentType.integer(1, 4095))
                                                                 .executes(s -> {
                                                                     ClientVideoScreen screen = getScreen(s);
                                                                     if (screen == null) return 0;

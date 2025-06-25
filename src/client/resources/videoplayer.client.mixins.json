@@ -11,6 +11,8 @@
     "LivingEntityRendererMixin",
     "MinecraftClientAccessor",
     "MinecraftClientMixin",
+    "WindowMixin",
+    "WorldRendererAccessor",
     "WorldRendererMixin"
   ],
   "injectors": {

@@ -29,11 +29,11 @@ public class ClientVideoScreen extends VideoScreen {
     @Override
     public void readMeta(ByteBuf buf) {
         super.readMeta(buf);
-        interactable = meta.getOrDefault("interactable", 1) != 0;
         metaChanged();
     }
 
     public void metaChanged() {
+        interactable = meta.getOrDefault("interactable", 1) != 0;
         if (player instanceof MetaListener m) m.onMetaChanged();
     }
 
@@ -75,8 +75,8 @@ public class ClientVideoScreen extends VideoScreen {
             if (player != old) {
                 if (old != null) old.cleanup();
                 player.init();
-                if (player instanceof MetaListener m) m.onMetaChanged();
             }
+            if (player instanceof MetaListener m) m.onMetaChanged();
             if (toSeek > 0) {
                 startTime = System.currentTimeMillis() - toSeek;
                 player.setTargetTime(toSeek);

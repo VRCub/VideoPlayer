@@ -44,11 +44,12 @@ public class EntityCameraPlayer extends AbstractCameraPlayer implements MetaList
         if (width > 1 && height > 1 && (framebuffer.textureWidth != width || framebuffer.textureHeight != height)) {
             framebuffer.resize(width, height);
         }
-        CameraRenderer.renderWorld(entity, framebuffer, fov);
+        CameraRenderer.renderWorld(entity, pool, framebuffer, entityOutlineFramebuffer, fov);
     }
 
     @Override
     public void onMetaChanged() {
+        super.onMetaChanged();
         fov = screen.meta.getOrDefault("fov", 70);
         int size = screen.meta.getOrDefault("size", 256 << 12 | 256);
         width = size >> 12 & 4095;

@@ -21,7 +21,7 @@ public class VlcDecoder {
     private static MediaPlayerFactory factory;
     private final EmbeddedMediaPlayer mediaPlayer;
 
-    private int width = 2, height = 2;
+    private int width = 1, height = 1;
     private final TextureRenderFormatCallback callback = new TextureRenderFormatCallback();
     private ByteBuffer buffer, glBuffer;
 

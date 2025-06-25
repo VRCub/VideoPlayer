@@ -28,7 +28,7 @@ public class PacketID {
     public enum Action {
         MUTE("静音", i -> (i >>> 1) == 0, (v, i) -> v.meta.put("mute", i)),
         INTERACTABLE("可交互", i -> (i >>> 1) == 0, (v, i) -> v.meta.put("interactable", i)),
-        SIZE("视口尺寸", i -> (i >> 12) > 1 && (i & 4095) > 1, (v, i) -> v.meta.put("size", i)),
+        SIZE("视口尺寸", i -> (i >> 12) != 0 && (i & 4095) != 0, (v, i) -> v.meta.put("size", i)),
         FOV("视场角", i -> i > 0 && i < 180, (v, i) -> v.meta.put("fov", i));
 
         public static final Action[] VALUES = values();

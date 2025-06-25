@@ -3,11 +3,14 @@ package com.github.squi2rel.vp.video;
 import com.github.squi2rel.vp.ClientVideoScreen;
 import net.minecraft.client.gl.Framebuffer;
 import net.minecraft.client.gl.SimpleFramebuffer;
+import net.minecraft.client.util.Pool;
 import org.jetbrains.annotations.Nullable;
 
-public abstract class AbstractCameraPlayer implements IVideoPlayer {
+public abstract class AbstractCameraPlayer implements IVideoPlayer, MetaListener {
     protected ClientVideoScreen screen;
-    protected Framebuffer framebuffer;
+    protected Framebuffer framebuffer, entityOutlineFramebuffer;
+    protected Pool pool;
+    protected int width = 256, height = 256;
 
     public AbstractCameraPlayer(ClientVideoScreen screen) {
         this.screen = screen;
@@ -30,12 +33,30 @@ public abstract class AbstractCameraPlayer implements IVideoPlayer {
 
     @Override
     public void init() {
-        framebuffer = new SimpleFramebuffer(2, 2, true);
+        framebuffer = new SimpleFramebuffer(256, 256, true);
+        entityOutlineFramebuffer = new SimpleFramebuffer(256, 256, true);
+        pool = new Pool(3);
     }
 
     @Override
     public void cleanup() {
         framebuffer.delete();
+        entityOutlineFramebuffer.delete();
+        pool.clear();
+    }
+
+    @Override
+    public void onMetaChanged() {
+        int size = screen.meta.getOrDefault("size", 256 << 12 | 256);
+        int w = size >> 12;
+        int h = size & 4095;
+        if (w != width || h != height) {
+            framebuffer.resize(w, h);
+            entityOutlineFramebuffer.resize(w, h);
+            pool.clear();
+        }
+        width = w;
+        height = h;
     }
 
     @Override

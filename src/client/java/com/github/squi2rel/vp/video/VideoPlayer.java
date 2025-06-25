@@ -61,7 +61,7 @@ public class VideoPlayer implements IVideoPlayer {
                 changed = false;
             });
         });
-        decoder.onFinish(() -> quad.resize(2, 2));
+        decoder.onFinish(() -> quad.resize(1, 1));
 
         quad = new VideoQuad(decoder.getWidth(), decoder.getHeight());
 
