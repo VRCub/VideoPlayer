@@ -28,14 +28,10 @@ public class VideoPlayerMain implements ModInitializer {
 
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-	public static Path libDir;
-
 	@SuppressWarnings("resource")
     @Override
 	public void onInitialize() {
 		Path gameDir = FabricLoader.getInstance().getGameDir();
-		libDir = gameDir.resolve("mods").resolve("VideoPlayer-vlc");
-		if (!libDir.toFile().exists()) throw new RuntimeException("Could not find vlc directory! Download at https://github.com/squi2rel/VideoPlayer-Library/releases/tag/vlc4 and unzip into mods");
 		StreamListener.load();
 		VideoProviders.register();
 		VideoPayload.register();

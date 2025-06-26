@@ -3,7 +3,6 @@
   "package": "com.github.squi2rel.vp.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "VlcJMixin"
   ],
   "injectors": {
     "defaultRequire": 1
