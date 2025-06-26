@@ -452,7 +452,6 @@ public class VideoPlayerClient implements ClientModInitializer {
     }
 
     private void render(WorldRenderContext ctx) {
-        if (CameraRenderer.rendering) return;
         Profilers.get().push("video");
         Profilers.get().swap("render");
         MatrixStack matrices = ctx.matrixStack();

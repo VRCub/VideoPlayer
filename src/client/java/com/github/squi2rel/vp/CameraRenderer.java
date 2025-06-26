@@ -46,6 +46,7 @@ public class CameraRenderer {
         Matrix4f pos = new Matrix4f().rotation(rot);
         client.worldRenderer.setupFrustum(camera.getPos(), pos, base);
         renderSelf = entity != client.player;
+        client.gameRenderer.setRenderHand(false);
         ((GameRendererAccessor) client.gameRenderer).setCamera(camera);
         client.worldRenderer.render(pool, client.getRenderTickCounter(), false, camera, client.gameRenderer, pos, proj);
         ((GameRendererAccessor) client.gameRenderer).setCamera(c);
