@@ -72,7 +72,7 @@ public class VideoPlayerClient implements ClientModInitializer {
     public static float remoteControlRange = 64;
     public static float noControlRange = 16;
 
-    public static boolean rendered = false;
+    public static boolean updated = false;
     public static Runnable disconnectHandler = () -> {};
 
     private static final SuggestionProvider<FabricClientCommandSource> SUGGEST_AREAS = (context, builder) -> {
@@ -363,17 +363,15 @@ public class VideoPlayerClient implements ClientModInitializer {
                                                             ClientPacketHandler.setMeta(screen, PacketID.Action.INTERACTABLE.ordinal(), s.getArgument("interactable", Boolean.class) ? 1 : 0);
                                                             return 1;
                                                         })))
-                                        .then(ClientCommandManager.literal("size")
-                                                .then(ClientCommandManager.argument("width", IntegerArgumentType.integer(1, 4095))
-                                                        .then(ClientCommandManager.argument("height", IntegerArgumentType.integer(1, 4095))
-                                                                .executes(s -> {
-                                                                    ClientVideoScreen screen = getScreen(s);
-                                                                    if (screen == null) return 0;
-                                                                    int width = s.getArgument("width", Integer.class);
-                                                                    int height = s.getArgument("height", Integer.class);
-                                                                    ClientPacketHandler.setMeta(screen, PacketID.Action.SIZE.ordinal(), width << 12 | height);
-                                                                    return 1;
-                                                                }))))
+                                        .then(ClientCommandManager.literal("aspect")
+                                                .then(ClientCommandManager.argument("aspect", FloatArgumentType.floatArg(0.0625f, 16f))
+                                                        .executes(s -> {
+                                                            ClientVideoScreen screen = getScreen(s);
+                                                            if (screen == null) return 0;
+                                                            float aspect = s.getArgument("aspect", Float.class);
+                                                            ClientPacketHandler.setMeta(screen, PacketID.Action.ASPECT.ordinal(), Float.floatToIntBits(aspect));
+                                                            return 1;
+                                                        })))
                                         .then(ClientCommandManager.literal("fov")
                                                 .then(ClientCommandManager.argument("fov", IntegerArgumentType.integer(1, 179))
                                                         .executes(s -> {
@@ -452,6 +450,7 @@ public class VideoPlayerClient implements ClientModInitializer {
     }
 
     private void render(WorldRenderContext ctx) {
+        if (CameraRenderer.rendering) return;
         Profilers.get().push("video");
         Profilers.get().swap("render");
         MatrixStack matrices = ctx.matrixStack();
@@ -580,8 +579,8 @@ public class VideoPlayerClient implements ClientModInitializer {
     }
 
     public static void update() {
-        if (rendered) return;
-        rendered = true;
+        if (updated) return;
+        updated = true;
         Profiler profiler = Profilers.get();
         profiler.push("video");
         profiler.push("updateFrame");

@@ -11,6 +11,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class MinecraftClientMixin {
     @Inject(method = "render", at = @At("HEAD"))
     public void render(boolean tick, CallbackInfo ci) {
-        VideoPlayerClient.rendered = false;
+        VideoPlayerClient.updated = false;
     }
 }

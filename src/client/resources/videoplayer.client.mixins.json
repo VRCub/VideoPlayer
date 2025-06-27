@@ -6,6 +6,7 @@
     "ClientPlayNetworkHandlerMixin",
     "ClientWorldAccessor",
     "GameRendererAccessor",
+    "GameRendererMixin",
     "LivingEntityRendererMixin",
     "MinecraftClientAccessor",
     "MinecraftClientMixin",

@@ -13,7 +13,6 @@ public class EntityCameraPlayer extends AbstractCameraPlayer implements MetaList
     public Entity entity;
     public UUID uuid;
     public int fov = 70;
-    public int width = 256, height = 256;
 
     public EntityCameraPlayer(ClientVideoScreen screen) {
         super(screen);
@@ -33,6 +32,7 @@ public class EntityCameraPlayer extends AbstractCameraPlayer implements MetaList
 
     @Override
     public void updateTexture() {
+        super.updateTexture();
         if (uuid == null) return;
         if (entity == null) {
             entity = getEntity(uuid);
@@ -41,19 +41,14 @@ public class EntityCameraPlayer extends AbstractCameraPlayer implements MetaList
                 return;
             }
         }
-        if (width > 1 && height > 1 && (framebuffer.textureWidth != width || framebuffer.textureHeight != height)) {
-            framebuffer.resize(width, height);
-        }
-        CameraRenderer.renderWorld(entity, pool, framebuffer, entityOutlineFramebuffer, fov);
+        CameraRenderer.renderWorld(entity, pool, framebuffer, entityOutlineFramebuffer, aspect, fov);
     }
 
     @Override
     public void onMetaChanged() {
         super.onMetaChanged();
         fov = screen.meta.getOrDefault("fov", 70);
-        int size = screen.meta.getOrDefault("size", 256 << 12 | 256);
-        width = size >> 12 & 4095;
-        height = size & 4095;
+        aspect = Float.intBitsToFloat(screen.meta.getOrDefault("aspect", Float.floatToIntBits(16f / 9f)));
     }
 
     public static Entity getEntity(UUID uuid) {

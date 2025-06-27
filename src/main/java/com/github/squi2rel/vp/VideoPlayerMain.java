@@ -20,40 +20,37 @@ import net.minecraft.text.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.file.Path;
-
 public class VideoPlayerMain implements ModInitializer {
-	public static final String MOD_ID = "videoplayer";
-	public static final String version = FabricLoader.getInstance().getModContainer(MOD_ID).orElseThrow().getMetadata().getVersion().toString();
+    public static final String MOD_ID = "videoplayer";
+    public static final String version = FabricLoader.getInstance().getModContainer(MOD_ID).orElseThrow().getMetadata().getVersion().toString();
 
-	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-	@SuppressWarnings("resource")
+    @SuppressWarnings("resource")
     @Override
-	public void onInitialize() {
-		Path gameDir = FabricLoader.getInstance().getGameDir();
-		StreamListener.load();
-		VideoProviders.register();
-		VideoPayload.register();
-		ServerLifecycleEvents.SERVER_STARTED.register(DataHolder::load);
-		ServerLifecycleEvents.SERVER_STOPPING.register(DataHolder::stop);
-		ServerTickEvents.START_WORLD_TICK.register(s -> DataHolder.update());
-		ServerPlayConnectionEvents.JOIN.register((e, p, s) -> DataHolder.playerJoin(e.player));
-		ServerPlayConnectionEvents.DISCONNECT.register((e, s) -> DataHolder.playerLeave(e.player.getUuid()));
-		ServerPlayNetworking.registerGlobalReceiver(VideoPayload.ID, (p, c) -> c.server().execute(() -> {
-			ByteBuf buf = Unpooled.wrappedBuffer(p.data());
-			try {
-				ServerPacketHandler.handle(c.player(), buf);
-			} catch (Exception e) {
-				c.player().networkHandler.disconnect(Text.of(e.toString()));
-			} finally {
-				buf.release();
-			}
-		}));
-		CommandRegistrationCallback.EVENT.register((d, c, e) -> d.register(CommandManager.literal("").then(CommandManager.argument("command", StringArgumentType.greedyString()).executes(s -> {
+    public void onInitialize() {
+        StreamListener.load();
+        VideoProviders.register();
+        VideoPayload.register();
+        ServerLifecycleEvents.SERVER_STARTED.register(DataHolder::load);
+        ServerLifecycleEvents.SERVER_STOPPING.register(DataHolder::stop);
+        ServerTickEvents.START_WORLD_TICK.register(s -> DataHolder.update());
+        ServerPlayConnectionEvents.JOIN.register((e, p, s) -> DataHolder.playerJoin(e.player));
+        ServerPlayConnectionEvents.DISCONNECT.register((e, s) -> DataHolder.playerLeave(e.player.getUuid()));
+        ServerPlayNetworking.registerGlobalReceiver(VideoPayload.ID, (p, c) -> c.server().execute(() -> {
+            ByteBuf buf = Unpooled.wrappedBuffer(p.data());
+            try {
+                ServerPacketHandler.handle(c.player(), buf);
+            } catch (Exception e) {
+                c.player().networkHandler.disconnect(Text.of(e.toString()));
+            } finally {
+                buf.release();
+            }
+        }));
+        CommandRegistrationCallback.EVENT.register((d, c, e) -> d.register(CommandManager.literal("").then(CommandManager.argument("command", StringArgumentType.greedyString()).executes(s -> {
             if (!s.getSource().isExecutedByPlayer()) return 0;
             ServerPacketHandler.sendTo(s.getSource().getPlayer(), ServerPacketHandler.execute(s.getArgument("command", String.class)));
             return 1;
         }))));
-	}
+    }
 }

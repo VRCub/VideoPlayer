@@ -21,13 +21,15 @@ public class CameraRenderer {
     public static boolean rendering = false;
     public static boolean renderSelf = false;
     public static int width, height;
+    public static float aspect;
 
-    public static void renderWorld(Entity entity, Pool pool, Framebuffer framebuffer, Framebuffer entityOutlineFramebuffer, int fov) {
+    public static void renderWorld(Entity entity, Pool pool, Framebuffer framebuffer, Framebuffer entityOutlineFramebuffer, float aspect, int fov) {
         if (client.world == null) return;
         width = framebuffer.textureWidth;
         height = framebuffer.textureHeight;
         framebuffer.beginWrite(true);
         rendering = true;
+        CameraRenderer.aspect = aspect;
         Camera c = client.gameRenderer.getCamera();
         camera.update(client.world, entity, false, false, client.getRenderTickCounter().getTickDelta(true));
         camera.updateEyeHeight();
@@ -52,7 +54,7 @@ public class CameraRenderer {
         ((GameRendererAccessor) client.gameRenderer).setCamera(c);
         renderSelf = false;
         rendering = false;
-	client.gameRenderer.setRenderHand(true);
+        client.gameRenderer.setRenderHand(true);
         RenderSystem.colorMask(false, false, false, true);
         framebuffer.setClearColor(0, 0, 0, 1);
         framebuffer.clear();
