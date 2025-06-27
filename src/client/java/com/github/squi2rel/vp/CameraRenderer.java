@@ -52,6 +52,7 @@ public class CameraRenderer {
         ((GameRendererAccessor) client.gameRenderer).setCamera(c);
         renderSelf = false;
         rendering = false;
+	client.gameRenderer.setRenderHand(true);
         RenderSystem.colorMask(false, false, false, true);
         framebuffer.setClearColor(0, 0, 0, 1);
         framebuffer.clear();
