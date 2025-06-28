@@ -12,8 +12,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.mojang.text2speech.Narrator.LOGGER;
-
 public class BiliBiliVideoProvider extends BiliBiliProvider {
     public static final String FETCH_URL = "https://api.bilibili.com/x/web-interface/view?bvid=%s";
     public static final String PLAY_URL = "https://api.bilibili.com/x/player/playurl?bvid=%s&cid=%s&qn=80&platform=html5";
@@ -35,7 +33,6 @@ public class BiliBiliVideoProvider extends BiliBiliProvider {
                 } else {
                     cid = root.getAsJsonArray("pages").get(p - 1).getAsJsonObject().get("cid").getAsString();
                 }
-                LOGGER.info(cid);
                 return new VideoMeta(root.get("title").getAsString(), cid);
             } catch (Exception e) {
                 source.reply(e.toString());
