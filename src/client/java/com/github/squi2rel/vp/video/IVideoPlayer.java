@@ -56,6 +56,10 @@ public interface IVideoPlayer {
 
     void updateTexture();
 
+    default boolean isPostUpdate() {
+        return false;
+    }
+
     default boolean flippedX() {
         return false;
     }

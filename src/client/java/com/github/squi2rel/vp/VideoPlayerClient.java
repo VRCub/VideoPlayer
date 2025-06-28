@@ -128,8 +128,9 @@ public class VideoPlayerClient implements ClientModInitializer {
         ClientPlayConnectionEvents.JOIN.register((h, s, c) -> {
             if (config.alwaysConnected) ClientPacketHandler.config(VideoPlayerMain.version);
         });
-        WorldRenderEvents.END.register(e -> VideoPlayerClient.update());
+        WorldRenderEvents.AFTER_SETUP.register(e -> VideoPlayerClient.update());
         WorldRenderEvents.LAST.register(this::render);
+        WorldRenderEvents.END.register(e -> VideoPlayerClient.postUpdate());
         ClientPlayNetworking.registerGlobalReceiver(VideoPayload.ID, (p, c) -> MinecraftClient.getInstance().execute(() -> {
             ByteBuf buf = Unpooled.wrappedBuffer(p.data());
             try {
@@ -580,17 +581,31 @@ public class VideoPlayerClient implements ClientModInitializer {
 
     public static void update() {
         if (updated) return;
-        updated = true;
         Profiler profiler = Profilers.get();
         profiler.push("video");
         profiler.push("updateFrame");
         for (ClientVideoScreen screen : screens) {
+            if (screen.isPostUpdate()) continue;
             screen.updateTexture();
         }
         profiler.swap("checkInteract");
         checkInteract();
         profiler.swap("updateBossBar");
         updateBossBar();
+        profiler.pop();
+        profiler.pop();
+    }
+
+    public static void postUpdate() {
+        if (updated) return;
+        updated = true;
+        Profiler profiler = Profilers.get();
+        profiler.push("video");
+        profiler.push("updateFrame");
+        for (ClientVideoScreen screen : screens) {
+            if (!screen.isPostUpdate()) continue;
+            screen.updateTexture();
+        }
         profiler.pop();
         profiler.pop();
     }

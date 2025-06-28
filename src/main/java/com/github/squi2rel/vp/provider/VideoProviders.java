@@ -20,14 +20,19 @@ public class VideoProviders {
 
     public static @Nullable CompletableFuture<VideoInfo> from(String str, IProviderSource source) {
         VideoPlayerMain.LOGGER.info("Player {} requested {}", source.name(), str);
-        for (IVideoProvider provider : providers) {
-            CompletableFuture<VideoInfo> info = provider.from(str, source);
-            if (info != null) {
-                VideoPlayerMain.LOGGER.info("Using {}", provider.getClass().getSimpleName());
-                return info;
+        try {
+            for (IVideoProvider provider : providers) {
+                CompletableFuture<VideoInfo> info = provider.from(str, source);
+                if (info != null) {
+                    VideoPlayerMain.LOGGER.info("Using {}", provider.getClass().getSimpleName());
+                    return info;
+                }
             }
+            VideoPlayerMain.LOGGER.info("No suitable provider");
+        } catch (Exception e) {
+            VideoPlayerMain.LOGGER.error(e.toString());
+            source.reply(e.toString());
         }
-        VideoPlayerMain.LOGGER.info("No suitable provider");
         return null;
     }
 }

@@ -138,6 +138,11 @@ public abstract class AbstractCameraPlayer implements IVideoPlayer, MetaListener
     }
 
     @Override
+    public boolean isPostUpdate() {
+        return true;
+    }
+
+    @Override
     public void draw(Matrix4f mat, int id, Vector3f p1, Vector3f p2, Vector3f p3, Vector3f p4, float u1, float v1, float u2, float v2) {
         float eu = 1 - u;
         float ev = 1 - v;

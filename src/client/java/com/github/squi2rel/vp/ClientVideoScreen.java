@@ -106,6 +106,10 @@ public class ClientVideoScreen extends VideoScreen {
         if (player != null) player.cleanup();
     }
 
+    public boolean isPostUpdate() {
+        return player != null && player.isPostUpdate();
+    }
+
     public static ClientVideoScreen from(VideoScreen screen) {
         return new ClientVideoScreen(screen.area, screen.name, screen.p1, screen.p2, screen.p3, screen.p4, screen.source);
     }
