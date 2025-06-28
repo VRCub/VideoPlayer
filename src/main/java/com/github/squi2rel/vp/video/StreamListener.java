@@ -5,12 +5,12 @@ import uk.co.caprica.vlcj.factory.MediaPlayerFactory;
 import uk.co.caprica.vlcj.player.base.MediaPlayer;
 import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 public class StreamListener implements IVideoListener {
+    private static final ConcurrentHashMap<MediaPlayer, StreamListener> references = new ConcurrentHashMap<>();
     public static MediaPlayerFactory factory;
-    private final Object syncLock = new Object();
     private MediaPlayer player;
     private Consumer<Boolean> playing = seekable -> {};
     private Runnable stopped = () -> {};
@@ -18,61 +18,77 @@ public class StreamListener implements IVideoListener {
     private Runnable timeout = () -> {};
     private final VideoInfo info;
 
+    private static final MediaPlayerEventAdapter callback = new MediaPlayerEventAdapter() {
+        @Override
+        public void playing(MediaPlayer mediaPlayer) {
+            StreamListener listener = references.get(mediaPlayer);
+            if (listener == null) return;
+            listener.playing.accept(listener.player.status().isSeekable());
+        }
+
+        @Override
+        public void stopped(MediaPlayer mediaPlayer) {
+            finish(mediaPlayer);
+        }
+
+        @Override
+        public void finished(MediaPlayer mediaPlayer) {
+            finish(mediaPlayer);
+        }
+
+        @Override
+        public void error(MediaPlayer mediaPlayer) {
+            StreamListener listener = references.get(mediaPlayer);
+            if (listener == null) return;
+            synchronized (listener) {
+                if (listener.player == null) return;
+                references.remove(mediaPlayer);
+                listener.errored.run();
+                listener.stopped.run();
+                mediaPlayer.controls().stopAsync();
+                mediaPlayer.release();
+                listener.player = null;
+            }
+        }
+    };
+
+    private static void finish(MediaPlayer mediaPlayer) {
+        StreamListener listener = references.get(mediaPlayer);
+        if (listener == null) return;
+        synchronized (listener) {
+            if (listener.player == null) return;
+            references.remove(mediaPlayer);
+            listener.stopped.run();
+            mediaPlayer.release();
+            listener.player = null;
+        }
+    }
+
     public StreamListener(VideoInfo info) {
         this.info = info;
         player = factory.mediaPlayers().newMediaPlayer();
-        CompletableFuture.runAsync(() -> {
+        runAsync(() -> {
             try {
                 Thread.sleep(10000);
-                if (player.status().isPlaying()) return;
+                if (isPlaying()) return;
                 MediaPlayer p = player;
-                synchronized (syncLock) {
+                synchronized (this) {
                     if (player == null) return;
+                    references.remove(p);
                     player = null;
                     timeout.run();
                     stopped.run();
                 }
                 p.controls().stopAsync();
                 p.release();
-            } catch (InterruptedException ignored) {
+            } catch (Exception ignored) {
             }
         });
-        player.events().addMediaPlayerEventListener(new MediaPlayerEventAdapter() {
-            @Override
-            public void playing(MediaPlayer mediaPlayer) {
-                playing.accept(player.status().isSeekable());
-            }
-
-            @Override
-            public void finished(MediaPlayer mediaPlayer) {
-                synchronized (syncLock) {
-                    if (player == null) return;
-                    stopped.run();
-                    mediaPlayer.release();
-                    player = null;
-                }
-            }
-
-            @Override
-            public void error(MediaPlayer mediaPlayer) {
-                synchronized (syncLock) {
-                    if (player == null) return;
-                    errored.run();
-                    stopped.run();
-                    mediaPlayer.controls().stopAsync();
-                    mediaPlayer.release();
-                    player = null;
-                }
-            }
-        });
+        player.events().addMediaPlayerEventListener(callback);
     }
 
     public static boolean accept(VideoInfo info) {
         return !info.path().isEmpty();
-    }
-
-    public static void load() {
-        StreamListener.factory = new MediaPlayerFactory("--no-video", "--aout=none", "--no-xlib", "--intf=dummy", "--quiet");
     }
 
     @Override
@@ -82,7 +98,7 @@ public class StreamListener implements IVideoListener {
 
     @Override
     public boolean isPlaying() {
-        return player.status().isPlaying();
+        return player != null;
     }
 
     @Override
@@ -107,18 +123,29 @@ public class StreamListener implements IVideoListener {
 
     @Override
     public void listen() {
+        references.put(player, this);
         player.media().play(info.path(), info.params());
     }
 
     @Override
     public void cancel() {
-        synchronized (syncLock) {
-            MediaPlayer p = player;
+        MediaPlayer p = player;
+        synchronized (this) {
+            if (player == null) return;
+            references.remove(player);
             player = null;
             p.controls().stopAsync();
-            Thread t = new Thread(p::release);
-            t.setDaemon(true);
-            t.start();
         }
+        runAsync(p::release);
+    }
+
+    public static void runAsync(Runnable runnable) {
+        Thread t = new Thread(runnable);
+        t.setDaemon(true);
+        t.start();
+    }
+
+    public static void load() {
+        factory = new MediaPlayerFactory("--no-video", "--aout=none", "--no-xlib", "--intf=dummy", "--quiet");
     }
 }

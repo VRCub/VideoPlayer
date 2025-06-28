@@ -43,6 +43,7 @@ public abstract class AbstractCameraPlayer implements IVideoPlayer, MetaListener
     public void init() {
         framebuffer1 = new SimpleFramebuffer(1, 1, true);
         framebuffer2 = new SimpleFramebuffer(1, 1, true);
+        framebuffer = framebuffer1;
         entityOutlineFramebuffer = new SimpleFramebuffer(1, 1, true);
         pool = new Pool(3);
     }

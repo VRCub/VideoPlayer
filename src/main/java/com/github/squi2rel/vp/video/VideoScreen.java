@@ -86,7 +86,7 @@ public class VideoScreen {
 
     public long getProgress() {
         VideoInfo info = infos.peek();
-        if (info == null || !info.seekable()) return -1;
+        if (now == null || info == null || !info.seekable()) return -1;
         return now.getProgress();
     }
 

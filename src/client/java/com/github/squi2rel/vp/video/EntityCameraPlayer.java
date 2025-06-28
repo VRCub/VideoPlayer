@@ -32,7 +32,6 @@ public class EntityCameraPlayer extends AbstractCameraPlayer implements MetaList
 
     @Override
     public void updateTexture() {
-        super.updateTexture();
         if (uuid == null) return;
         if (entity == null) {
             entity = getEntity(uuid);
@@ -41,6 +40,7 @@ public class EntityCameraPlayer extends AbstractCameraPlayer implements MetaList
                 return;
             }
         }
+        super.updateTexture();
         CameraRenderer.renderWorld(entity, pool, framebuffer, entityOutlineFramebuffer, aspect, fov);
     }
 

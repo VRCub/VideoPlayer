@@ -56,11 +56,13 @@ public class ClientPacketHandler {
                     player.sendMessage(Text.of("无法解析视频源"), false);
                     return;
                 }
+                if (screen.player != null) screen.player.stop();
                 CompletableFuture.supplyAsync(() -> {
                     try {
                         return video.get();
                     } catch (Exception e) {
-                        throw new RuntimeException(e);
+                        LOGGER.error(e.toString());
+                        return null;
                     }
                 }).thenAccept(v -> {
                     try {
