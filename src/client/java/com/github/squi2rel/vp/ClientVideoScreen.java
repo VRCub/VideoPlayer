@@ -49,6 +49,10 @@ public class ClientVideoScreen extends VideoScreen {
         if (player != null) player.draw(mat, this);
     }
 
+    public void swapTexture() {
+        if (player != null) player.swapTexture();
+    }
+
     public void updateTexture() {
         if (player != null) player.updateTexture();
     }

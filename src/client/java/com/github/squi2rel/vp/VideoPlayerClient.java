@@ -586,6 +586,7 @@ public class VideoPlayerClient implements ClientModInitializer {
         profiler.push("updateFrame");
         for (ClientVideoScreen screen : screens) {
             if (screen.isPostUpdate()) continue;
+            screen.swapTexture();
             screen.updateTexture();
         }
         profiler.swap("checkInteract");

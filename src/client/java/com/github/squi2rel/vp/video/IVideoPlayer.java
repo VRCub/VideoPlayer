@@ -54,6 +54,9 @@ public interface IVideoPlayer {
 
     void setTargetTime(long targetTime);
 
+    default void swapTexture() {
+    }
+
     void updateTexture();
 
     default boolean isPostUpdate() {

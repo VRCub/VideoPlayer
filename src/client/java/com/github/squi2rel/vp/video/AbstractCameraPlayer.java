@@ -13,7 +13,8 @@ import org.joml.Vector3f;
 
 public abstract class AbstractCameraPlayer implements IVideoPlayer, MetaListener {
     protected ClientVideoScreen screen;
-    protected Framebuffer framebuffer, entityOutlineFramebuffer;
+    protected Framebuffer framebuffer, framebuffer1, framebuffer2, entityOutlineFramebuffer;
+    protected boolean first = true;
     protected Pool pool;
     protected float aspect = 16f / 9f;
     protected int targetWidth = 16, targetHeight = 9;
@@ -40,16 +41,24 @@ public abstract class AbstractCameraPlayer implements IVideoPlayer, MetaListener
 
     @Override
     public void init() {
-        framebuffer = new SimpleFramebuffer(256, 256, true);
-        entityOutlineFramebuffer = new SimpleFramebuffer(256, 256, true);
+        framebuffer1 = new SimpleFramebuffer(1, 1, true);
+        framebuffer2 = new SimpleFramebuffer(1, 1, true);
+        entityOutlineFramebuffer = new SimpleFramebuffer(1, 1, true);
         pool = new Pool(3);
     }
 
     @Override
     public void cleanup() {
-        framebuffer.delete();
+        framebuffer1.delete();
+        framebuffer2.delete();
         entityOutlineFramebuffer.delete();
         pool.clear();
+    }
+
+    @Override
+    public void swapTexture() {
+        framebuffer = first ? framebuffer1 : framebuffer2;
+        first = !first;
     }
 
     @Override
@@ -79,11 +88,12 @@ public abstract class AbstractCameraPlayer implements IVideoPlayer, MetaListener
 
     @Override
     public void onMetaChanged() {
+        aspect = Float.intBitsToFloat(screen.meta.getOrDefault("aspect", Float.floatToIntBits(16f / 9f)));
     }
 
     @Override
     public int getTextureId() {
-        return framebuffer.getColorAttachment();
+        return (first ? framebuffer1 : framebuffer2).getColorAttachment();
     }
 
     @Override

@@ -48,7 +48,6 @@ public class EntityCameraPlayer extends AbstractCameraPlayer implements MetaList
     public void onMetaChanged() {
         super.onMetaChanged();
         fov = screen.meta.getOrDefault("fov", 70);
-        aspect = Float.intBitsToFloat(screen.meta.getOrDefault("aspect", Float.floatToIntBits(16f / 9f)));
     }
 
     public static Entity getEntity(UUID uuid) {
