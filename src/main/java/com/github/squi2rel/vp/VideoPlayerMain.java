@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
 public class VideoPlayerMain implements ModInitializer {
     public static final String MOD_ID = "videoplayer";
     public static final String version = FabricLoader.getInstance().getModContainer(MOD_ID).orElseThrow().getMetadata().getVersion().toString();
-    public static UnsatisfiedLinkError error = new UnsatisfiedLinkError();
+    public static UnsatisfiedLinkError error = null;
 
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
