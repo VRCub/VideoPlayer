@@ -51,12 +51,16 @@ public class ClientPacketHandler {
                 VideoInfo info = VideoInfo.read(buf);
                 ClientPlayerEntity player = MinecraftClient.getInstance().player;
                 if (player == null) return;
+                if (screen.player != null) screen.player.stop();
+                if (info.rawPath().isEmpty()) {
+                    screen.play(info);
+                    return;
+                }
                 CompletableFuture<VideoInfo> video = VideoProviders.from(info.rawPath(), new NamedProviderSource(info.playerName()));
                 if (video == null) {
                     player.sendMessage(Text.of("无法解析视频源"), false);
                     return;
                 }
-                if (screen.player != null) screen.player.stop();
                 CompletableFuture.supplyAsync(() -> {
                     try {
                         return video.get();

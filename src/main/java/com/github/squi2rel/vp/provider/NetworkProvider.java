@@ -18,7 +18,7 @@ public class NetworkProvider implements IVideoProvider {
                 source.reply("解析视频流失败");
                 return null;
             }
-            return new VideoInfo(source.name(), info.name, str, str, -1, info.seekable, NO_PARAMS);
+            return new VideoInfo(source.name(), info.name, str, "", -1, info.seekable, NO_PARAMS);
         });
     }
 
@@ -38,14 +38,24 @@ public class NetworkProvider implements IVideoProvider {
             return null;
         }
         listener.cancel();
+        return new StreamInfo(getName(mrl), seekable);
+    }
+
+    private static String getName(String mrl) {
         String path = mrl.toLowerCase();
         String name = "Unknown Stream";
-        if (path.startsWith("http") && path.contains(".m3u8")) name = "HLS Stream";
-        if (path.startsWith("rtsp://")) name = "RTSP Stream";
-        if (path.startsWith("http")) name = "HTTP Stream";
-        if (path.startsWith("rtp://")) name = "RTP Stream";
-        if (path.startsWith("mms://")) name = "MMS Stream";
-        return new StreamInfo(name, seekable);
+        if (path.startsWith("http") && path.contains(".m3u8")) {
+            name = "HLS Stream";
+        } else if (path.startsWith("rtsp://")) {
+            name = "RTSP Stream";
+        } else if (path.startsWith("http")) {
+            name = "HTTP Stream";
+        } else if (path.startsWith("rtp://")) {
+            name = "RTP Stream";
+        } else if (path.startsWith("mms://")) {
+            name = "MMS Stream";
+        }
+        return name;
     }
 
     private record StreamInfo(String name, boolean seekable) {

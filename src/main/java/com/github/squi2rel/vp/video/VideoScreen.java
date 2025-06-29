@@ -182,9 +182,11 @@ public class VideoScreen {
                 DataHolder.unlock();
             }
             syncInfo();
-            try {
-                info = Objects.requireNonNull(VideoProviders.from(info.rawPath(), new NamedProviderSource(info.playerName()))).get();
-            } catch (Exception ignored) {
+            if (!info.rawPath().isEmpty()) {
+                try {
+                    info = Objects.requireNonNull(VideoProviders.from(info.rawPath(), new NamedProviderSource(info.playerName()))).get();
+                } catch (Exception ignored) {
+                }
             }
             return now = VideoListeners.from(info);
         });
