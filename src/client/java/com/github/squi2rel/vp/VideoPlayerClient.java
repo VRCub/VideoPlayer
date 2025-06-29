@@ -51,9 +51,12 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.github.squi2rel.vp.VideoPlayerMain.error;
+
 @SuppressWarnings({"resource", "DataFlowIssue"})
 public class VideoPlayerClient implements ClientModInitializer {
     public static final Path configPath = FabricLoader.getInstance().getConfigDir().resolve("videoplayer-client.json");
+    public static final MinecraftClient client = MinecraftClient.getInstance();
     public static Config config;
     private static final Gson gson = new Gson();
 
@@ -110,10 +113,13 @@ public class VideoPlayerClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        if (error != null) {
+            ClientPlayConnectionEvents.JOIN.register((h, s, c) -> c.player.sendMessage(Text.literal("VideoPlayer错误: libVLC库加载失败\n" + error + "\n查看日志获取更多信息").formatted(Formatting.RED), false));
+        }
         VlcDecoder.load();
         loadConfig();
         VideoProviders.register();
-        disconnectHandler = () -> MinecraftClient.getInstance().execute(() -> {
+        disconnectHandler = () -> client.execute(() -> {
             connected = false;
             for (ClientVideoArea area : areas.values()) {
                 area.remove();
@@ -131,7 +137,7 @@ public class VideoPlayerClient implements ClientModInitializer {
         WorldRenderEvents.AFTER_SETUP.register(e -> VideoPlayerClient.update());
         WorldRenderEvents.LAST.register(this::render);
         WorldRenderEvents.END.register(e -> VideoPlayerClient.postUpdate());
-        ClientPlayNetworking.registerGlobalReceiver(VideoPayload.ID, (p, c) -> MinecraftClient.getInstance().execute(() -> {
+        ClientPlayNetworking.registerGlobalReceiver(VideoPayload.ID, (p, c) -> client.execute(() -> {
             ByteBuf buf = Unpooled.wrappedBuffer(p.data());
             try {
                 ClientPacketHandler.handle(buf);
@@ -478,7 +484,7 @@ public class VideoPlayerClient implements ClientModInitializer {
 
     private static void updateBossBar() {
         if (currentLooking != null) {
-            ClientPlayNetworkHandler handler = MinecraftClient.getInstance().getNetworkHandler();
+            ClientPlayNetworkHandler handler = client.getNetworkHandler();
             if (!bossBarAdded) {
                 handler.onBossBar(BossBarS2CPacket.add(bossBar));
                 bossBarAdded = true;
@@ -506,14 +512,14 @@ public class VideoPlayerClient implements ClientModInitializer {
             handler.onBossBar(BossBarS2CPacket.updateName(bossBar));
             handler.onBossBar(BossBarS2CPacket.updateProgress(bossBar));
         } else if (bossBarAdded) {
-            ClientPlayNetworkHandler handler = MinecraftClient.getInstance().getNetworkHandler();
+            ClientPlayNetworkHandler handler = client.getNetworkHandler();
             handler.onBossBar(BossBarS2CPacket.remove(bossBar.getUuid()));
             bossBarAdded = false;
         }
     }
 
     private static void checkInteract() {
-        MinecraftClient client = MinecraftClient.getInstance();
+        MinecraftClient client = VideoPlayerClient.client;
         if (client == null) return;
 
         isInArea = false;
@@ -524,7 +530,7 @@ public class VideoPlayerClient implements ClientModInitializer {
             return;
         }
 
-        float delta = MinecraftClient.getInstance().getRenderTickCounter().getTickDelta(true);
+        float delta = VideoPlayerClient.client.getRenderTickCounter().getTickDelta(true);
         Vec3d eyePos = client.player.getCameraPosVec(delta);
         Vec3d lookVec = client.player.getRotationVec(delta);
 

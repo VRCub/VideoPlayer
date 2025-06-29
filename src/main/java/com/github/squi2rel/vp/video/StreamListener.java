@@ -45,10 +45,10 @@ public class StreamListener implements IVideoListener {
                 references.remove(mediaPlayer);
                 listener.errored.run();
                 listener.stopped.run();
-                mediaPlayer.controls().stopAsync();
-                mediaPlayer.release();
                 listener.player = null;
             }
+            mediaPlayer.controls().stopAsync();
+            mediaPlayer.release();
         }
     };
 
@@ -59,9 +59,9 @@ public class StreamListener implements IVideoListener {
             if (listener.player == null) return;
             references.remove(mediaPlayer);
             listener.stopped.run();
-            mediaPlayer.release();
             listener.player = null;
         }
+        mediaPlayer.release();
     }
 
     public StreamListener(VideoInfo info) {
@@ -134,9 +134,11 @@ public class StreamListener implements IVideoListener {
             if (player == null) return;
             references.remove(player);
             player = null;
-            p.controls().stopAsync();
         }
-        runAsync(p::release);
+        runAsync(() -> {
+            p.controls().stopAsync();
+            p.release();
+        });
     }
 
     public static void runAsync(Runnable runnable) {
