@@ -6,10 +6,7 @@ import net.minecraft.client.gl.Framebuffer;
 import net.minecraft.client.gl.SimpleFramebuffer;
 import net.minecraft.client.util.Pool;
 import net.minecraft.client.util.Window;
-import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix4f;
-import org.joml.Vector3f;
 
 public abstract class AbstractCameraPlayer implements IVideoPlayer, MetaListener {
     protected ClientVideoScreen screen;
@@ -18,7 +15,6 @@ public abstract class AbstractCameraPlayer implements IVideoPlayer, MetaListener
     protected Pool pool;
     protected float aspect = 16f / 9f;
     protected int targetWidth = 16, targetHeight = 9;
-    protected float u = 0, v = 0;
 
     public AbstractCameraPlayer(ClientVideoScreen screen) {
         this.screen = screen;
@@ -67,6 +63,7 @@ public abstract class AbstractCameraPlayer implements IVideoPlayer, MetaListener
         Window window = MinecraftClient.getInstance().getWindow();
         int windowWidth = window.getFramebufferWidth();
         int windowHeight = window.getFramebufferHeight();
+
         int width = windowWidth;
         int height = Math.round(width / aspect);
 
@@ -77,9 +74,6 @@ public abstract class AbstractCameraPlayer implements IVideoPlayer, MetaListener
 
         targetWidth = width;
         targetHeight = height;
-
-        u = (float) (framebuffer.textureWidth - width) / framebuffer.textureWidth;
-        v = (float) (framebuffer.textureHeight - height) / framebuffer.textureHeight;
 
         if (windowWidth != 0 && windowHeight != 0 && (framebuffer.textureWidth != windowWidth || framebuffer.textureHeight != windowHeight)) {
             framebuffer.resize(windowWidth, windowHeight);
@@ -151,12 +145,5 @@ public abstract class AbstractCameraPlayer implements IVideoPlayer, MetaListener
     @Override
     public boolean isPostUpdate() {
         return true;
-    }
-
-    @Override
-    public void draw(Matrix4f mat, int id, Vector3f p1, Vector3f p2, Vector3f p3, Vector3f p4, float u1, float v1, float u2, float v2) {
-        float eu = 1 - u;
-        float ev = 1 - v;
-        IVideoPlayer.super.draw(mat, id, p1, p2, p3, p4, MathHelper.lerp(u1, u, eu), MathHelper.lerp(v1, v, ev), MathHelper.lerp(u2, u, eu), MathHelper.lerp(v2, v, ev));
     }
 }
