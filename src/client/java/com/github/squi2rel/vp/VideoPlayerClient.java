@@ -387,6 +387,32 @@ public class VideoPlayerClient implements ClientModInitializer {
                                                             ClientPacketHandler.setMeta(screen, PacketID.Action.FOV.ordinal(), s.getArgument("fov", Integer.class));
                                                             return 1;
                                                         })))
+                                        .then(ClientCommandManager.literal("custom")
+                                                .then(ClientCommandManager.literal("set")
+                                                        .then(ClientCommandManager.argument("key", StringArgumentType.string())
+                                                                .then(ClientCommandManager.argument("value", IntegerArgumentType.integer())
+                                                                        .executes(s -> {
+                                                                            ClientVideoScreen screen = getScreen(s);
+                                                                            if (screen == null) return 0;
+                                                                            ClientPacketHandler.setCustomMeta(screen, s.getArgument("key", String.class), s.getArgument("value", Integer.class));
+                                                                            return 1;
+                                                                        }))))
+                                                .then(ClientCommandManager.literal("get")
+                                                        .then(ClientCommandManager.argument("key", StringArgumentType.string())
+                                                                .executes(s -> {
+                                                                    ClientVideoScreen screen = getScreen(s);
+                                                                    if (screen == null) return 0;
+                                                                    String key = s.getArgument("key", String.class);
+                                                                    s.getSource().sendFeedback(Text.of(key + " = " + screen.meta.getOrDefault(key, null)));
+                                                                    return 1;
+                                                                })))
+                                                .then(ClientCommandManager.literal("list")
+                                                        .executes(s -> {
+                                                            ClientVideoScreen screen = getScreen(s);
+                                                            if (screen == null) return 0;
+                                                            s.getSource().sendFeedback(Text.of(screen.meta.toString()));
+                                                            return 1;
+                                                        })))
                                 )))
         ));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -469,6 +495,7 @@ public class VideoPlayerClient implements ClientModInitializer {
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(GL11.GL_LESS);
         RenderSystem.disableCull();
+        int old = RenderSystem.getShaderTexture(0);
         for (ClientVideoScreen screen : screens) {
             try {
                 screen.draw(mat);
@@ -476,6 +503,7 @@ public class VideoPlayerClient implements ClientModInitializer {
                 VideoPlayerMain.LOGGER.info(e.toString());
             }
         }
+        RenderSystem.setShaderTexture(0, old);
         RenderSystem.enableCull();
         RenderSystem.disableDepthTest();
         Profilers.get().pop();

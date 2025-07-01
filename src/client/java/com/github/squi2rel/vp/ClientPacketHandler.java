@@ -151,6 +151,10 @@ public class ClientPacketHandler {
                 action.apply(screen, buf.readInt());
                 screen.metaChanged();
             }
+            case SET_CUSTOM_META -> {
+                ClientVideoScreen screen = areas.get(readName(buf)).getScreen(readName(buf));
+                screen.meta.put(readName(buf), buf.readInt());
+            }
             default -> LOGGER.warn("Unknown packet type: {}", type);
         }
         if (buf.readableBytes() > 0) {
@@ -265,5 +269,9 @@ public class ClientPacketHandler {
 
     public static void setMeta(VideoScreen screen, int actionId, int value) {
         send(ServerPacketHandler.setMeta(screen, actionId, value));
+    }
+
+    public static void setCustomMeta(VideoScreen screen, String key, int value) {
+        send(ServerPacketHandler.setCustomMeta(screen, key, value));
     }
 }

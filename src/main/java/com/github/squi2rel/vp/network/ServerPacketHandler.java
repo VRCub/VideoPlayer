@@ -173,6 +173,20 @@ public class ServerPacketHandler {
                     area.forEachPlayer(p -> sendTo(pm.getPlayer(p), data));
                 }
             }
+            case SET_CUSTOM_META -> {
+                VideoArea area = getArea(player, readName(buf));
+                if (area == null) return;
+                VideoScreen screen = area.getScreen(readName(buf));
+                if (screen == null) return;
+                String key = readName(buf);
+                int value = buf.readInt();
+                screen.meta.put(key, value);
+                if (area.hasPlayer()) {
+                    byte[] data = setCustomMeta(screen, key, value);
+                    PlayerManager pm = Objects.requireNonNull(player.getServer()).getPlayerManager();
+                    area.forEachPlayer(p -> sendTo(pm.getPlayer(p), data));
+                }
+            }
             default -> player.networkHandler.disconnect(Text.of("Unknown packet type: " + type));
         }
         if (buf.readableBytes() > 0) {
@@ -372,6 +386,15 @@ public class ServerPacketHandler {
         buf.writeByte(actionId);
         writeString(buf, screen.area.name);
         writeString(buf, screen.name);
+        buf.writeInt(value);
+        return toByteArray(buf);
+    }
+
+    public static byte[] setCustomMeta(VideoScreen screen, String key, int value) {
+        ByteBuf buf = create(SET_CUSTOM_META);
+        writeString(buf, screen.area.name);
+        writeString(buf, screen.name);
+        ByteBufUtils.writeString(buf, key);
         buf.writeInt(value);
         return toByteArray(buf);
     }

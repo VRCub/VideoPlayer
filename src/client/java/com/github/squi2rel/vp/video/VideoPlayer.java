@@ -12,14 +12,14 @@ import static com.github.squi2rel.vp.VideoPlayerClient.config;
 
 public class VideoPlayer implements IVideoPlayer {
     public final Vector3f p1, p2, p3, p4;
-    private VlcDecoder decoder;
-    private VideoQuad quad;
-    private boolean initialized = false;
-    private boolean changed = false;
-    private long targetTime = -1;
+    protected VlcDecoder decoder;
+    protected VideoQuad quad;
+    protected boolean initialized = false;
+    protected boolean changed = false;
+    protected long targetTime = -1;
     public int videoWidth, videoHeight;
 
-    private final ClientVideoScreen screen;
+    protected final ClientVideoScreen screen;
 
     public VideoPlayer(ClientVideoScreen screen, Vector3f p1, Vector3f p2, Vector3f p3, Vector3f p4) {
         this.screen = screen;
