@@ -3,7 +3,8 @@ package com.github.squi2rel.vp;
 import com.github.squi2rel.vp.provider.VideoInfo;
 import com.github.squi2rel.vp.video.*;
 import io.netty.buffer.ByteBuf;
-import org.joml.Matrix4f;
+import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.util.math.MatrixStack;
 import org.joml.Vector3f;
 
 import java.util.Objects;
@@ -45,8 +46,8 @@ public class ClientVideoScreen extends VideoScreen {
         if (player != null) player.cleanup();
     }
 
-    public void draw(Matrix4f mat) {
-        if (player != null) player.draw(mat, this);
+    public void draw(MatrixStack matrices, VertexConsumerProvider.Immediate immediate) {
+        if (player != null) player.draw(matrices, immediate, this);
     }
 
     public void swapTexture() {

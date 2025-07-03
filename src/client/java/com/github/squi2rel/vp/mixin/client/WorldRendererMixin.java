@@ -1,6 +1,7 @@
 package com.github.squi2rel.vp.mixin.client;
 
 import com.github.squi2rel.vp.CameraRenderer;
+import com.github.squi2rel.vp.VideoRenderer;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.Frustum;
@@ -9,6 +10,7 @@ import net.minecraft.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.List;
@@ -20,5 +22,10 @@ public class WorldRendererMixin {
         if (CameraRenderer.renderSelf) {
             output.add(MinecraftClient.getInstance().player);
         }
+    }
+
+    @Inject(method = "renderClouds", at = @At("HEAD"), cancellable = true)
+    public void noClouds(CallbackInfo ci) {
+        if (VideoRenderer.skybox) ci.cancel();
     }
 }

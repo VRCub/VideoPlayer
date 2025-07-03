@@ -180,9 +180,14 @@ public class ServerPacketHandler {
                 if (screen == null) return;
                 String key = readName(buf);
                 int value = buf.readInt();
-                screen.meta.put(key, value);
+                boolean remove = buf.readBoolean();
+                if (remove) {
+                    screen.meta.remove(key);
+                } else {
+                    screen.meta.put(key, value);
+                }
                 if (area.hasPlayer()) {
-                    byte[] data = setCustomMeta(screen, key, value);
+                    byte[] data = setCustomMeta(screen, key, value, remove);
                     PlayerManager pm = Objects.requireNonNull(player.getServer()).getPlayerManager();
                     area.forEachPlayer(p -> sendTo(pm.getPlayer(p), data));
                 }
@@ -390,12 +395,13 @@ public class ServerPacketHandler {
         return toByteArray(buf);
     }
 
-    public static byte[] setCustomMeta(VideoScreen screen, String key, int value) {
+    public static byte[] setCustomMeta(VideoScreen screen, String key, int value, boolean remove) {
         ByteBuf buf = create(SET_CUSTOM_META);
         writeString(buf, screen.area.name);
         writeString(buf, screen.name);
         ByteBufUtils.writeString(buf, key);
         buf.writeInt(value);
+        buf.writeBoolean(remove);
         return toByteArray(buf);
     }
 }

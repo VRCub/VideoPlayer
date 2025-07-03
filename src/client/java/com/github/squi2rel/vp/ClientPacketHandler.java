@@ -74,7 +74,7 @@ public class ClientPacketHandler {
                             player.sendMessage(Text.of("无法解析视频源"), false);
                             return;
                         }
-                        MinecraftClient.getInstance().execute(() -> screen.play(new VideoInfo(info.playerName(), info.name(), v.path(), v.rawPath(), v.expire(), v.seekable(), v.params())));
+                        MinecraftClient.getInstance().execute(() -> screen.play(new VideoInfo(info.playerName(), info.name(), v.path(), v.rawPath(), v.expire(), v.seekable(), info.params())));
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -146,14 +146,27 @@ public class ClientPacketHandler {
                 ServerPacketHandler.readUV(buf, screen);
             }
             case SET_META -> {
-                Action action = Action.VALUES[buf.readUnsignedByte()];
+                short i = buf.readUnsignedByte();
+                if (i >= Action.VALUES.length) {
+                    LOGGER.warn("Unknown action type: {}", i);
+                    return;
+                }
+                Action action = Action.VALUES[i];
                 ClientVideoScreen screen = areas.get(readName(buf)).getScreen(readName(buf));
                 action.apply(screen, buf.readInt());
                 screen.metaChanged();
             }
             case SET_CUSTOM_META -> {
                 ClientVideoScreen screen = areas.get(readName(buf)).getScreen(readName(buf));
-                screen.meta.put(readName(buf), buf.readInt());
+                String key = readName(buf);
+                int value = buf.readInt();
+                boolean remove = buf.readBoolean();
+                if (remove) {
+                    screen.meta.remove(key);
+                } else {
+                    screen.meta.put(key, value);
+                }
+                screen.metaChanged();
             }
             default -> LOGGER.warn("Unknown packet type: {}", type);
         }
@@ -271,7 +284,7 @@ public class ClientPacketHandler {
         send(ServerPacketHandler.setMeta(screen, actionId, value));
     }
 
-    public static void setCustomMeta(VideoScreen screen, String key, int value) {
-        send(ServerPacketHandler.setCustomMeta(screen, key, value));
+    public static void setCustomMeta(VideoScreen screen, String key, int value, boolean remove) {
+        send(ServerPacketHandler.setCustomMeta(screen, key, value, remove));
     }
 }

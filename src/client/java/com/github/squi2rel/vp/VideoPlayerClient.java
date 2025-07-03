@@ -6,7 +6,6 @@ import com.github.squi2rel.vp.provider.VideoInfo;
 import com.github.squi2rel.vp.provider.VideoProviders;
 import com.github.squi2rel.vp.video.*;
 import com.google.gson.Gson;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.brigadier.arguments.*;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
@@ -20,14 +19,11 @@ import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.ShaderProgramKeys;
 import net.minecraft.client.gui.hud.ClientBossBar;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.CustomModelDataComponent;
 import net.minecraft.entity.boss.BossBar;
@@ -41,9 +37,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.profiler.Profiler;
 import net.minecraft.util.profiler.Profilers;
 import org.apache.commons.lang3.StringUtils;
-import org.joml.Matrix4f;
 import org.joml.Vector3f;
-import org.lwjgl.opengl.GL11;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -51,9 +45,10 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.github.squi2rel.vp.VideoPlayerMain.LOGGER;
 import static com.github.squi2rel.vp.VideoPlayerMain.error;
 
-@SuppressWarnings({"resource", "DataFlowIssue"})
+@SuppressWarnings({"DataFlowIssue"})
 public class VideoPlayerClient implements ClientModInitializer {
     public static final Path configPath = FabricLoader.getInstance().getConfigDir().resolve("videoplayer-client.json");
     public static final MinecraftClient client = MinecraftClient.getInstance();
@@ -135,12 +130,14 @@ public class VideoPlayerClient implements ClientModInitializer {
             if (config.alwaysConnected) ClientPacketHandler.config(VideoPlayerMain.version);
         });
         WorldRenderEvents.AFTER_SETUP.register(e -> VideoPlayerClient.update());
-        WorldRenderEvents.LAST.register(this::render);
+        WorldRenderEvents.AFTER_ENTITIES.register(VideoRenderer::render);
         WorldRenderEvents.END.register(e -> VideoPlayerClient.postUpdate());
         ClientPlayNetworking.registerGlobalReceiver(VideoPayload.ID, (p, c) -> client.execute(() -> {
             ByteBuf buf = Unpooled.wrappedBuffer(p.data());
             try {
                 ClientPacketHandler.handle(buf);
+            } catch (Exception e) {
+                LOGGER.error("Exception while handling packet", e);
             } finally {
                 buf.release();
             }
@@ -394,7 +391,7 @@ public class VideoPlayerClient implements ClientModInitializer {
                                                                         .executes(s -> {
                                                                             ClientVideoScreen screen = getScreen(s);
                                                                             if (screen == null) return 0;
-                                                                            ClientPacketHandler.setCustomMeta(screen, s.getArgument("key", String.class), s.getArgument("value", Integer.class));
+                                                                            ClientPacketHandler.setCustomMeta(screen, s.getArgument("key", String.class), s.getArgument("value", Integer.class), false);
                                                                             return 1;
                                                                         }))))
                                                 .then(ClientCommandManager.literal("get")
@@ -403,7 +400,15 @@ public class VideoPlayerClient implements ClientModInitializer {
                                                                     ClientVideoScreen screen = getScreen(s);
                                                                     if (screen == null) return 0;
                                                                     String key = s.getArgument("key", String.class);
-                                                                    s.getSource().sendFeedback(Text.of(key + " = " + screen.meta.getOrDefault(key, null)));
+                                                                    s.getSource().sendFeedback(Text.of(key + "=" + screen.meta.getOrDefault(key, null)));
+                                                                    return 1;
+                                                                })))
+                                                .then(ClientCommandManager.literal("remove")
+                                                        .then(ClientCommandManager.argument("key", StringArgumentType.string())
+                                                                .executes(s -> {
+                                                                    ClientVideoScreen screen = getScreen(s);
+                                                                    if (screen == null) return 0;
+                                                                    ClientPacketHandler.setCustomMeta(screen, s.getArgument("key", String.class), -1, true);
                                                                     return 1;
                                                                 })))
                                                 .then(ClientCommandManager.literal("list")
@@ -480,34 +485,6 @@ public class VideoPlayerClient implements ClientModInitializer {
             return true;
         }
         return false;
-    }
-
-    private void render(WorldRenderContext ctx) {
-        if (CameraRenderer.rendering) return;
-        Profilers.get().push("video");
-        Profilers.get().swap("render");
-        MatrixStack matrices = ctx.matrixStack();
-        Vec3d camera = ctx.camera().getPos();
-        matrices.push();
-        matrices.translate(-camera.x, -camera.y, -camera.z);
-        Matrix4f mat = matrices.peek().getPositionMatrix();
-        RenderSystem.setShader(ShaderProgramKeys.POSITION_TEX_COLOR);
-        RenderSystem.enableDepthTest();
-        RenderSystem.depthFunc(GL11.GL_LESS);
-        RenderSystem.disableCull();
-        int old = RenderSystem.getShaderTexture(0);
-        for (ClientVideoScreen screen : screens) {
-            try {
-                screen.draw(mat);
-            } catch (Exception e) {
-                VideoPlayerMain.LOGGER.info(e.toString());
-            }
-        }
-        RenderSystem.setShaderTexture(0, old);
-        RenderSystem.enableCull();
-        RenderSystem.disableDepthTest();
-        Profilers.get().pop();
-        Profilers.get().pop();
     }
 
     private static void updateBossBar() {
