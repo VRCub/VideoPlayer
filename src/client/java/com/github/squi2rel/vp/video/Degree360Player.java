@@ -14,7 +14,7 @@ import static com.github.squi2rel.vp.VideoPlayerClient.config;
 public class Degree360Player extends VideoPlayer implements MetaListener {
     protected float[] vertices;
     protected int vertexCount;
-    protected VertexBuffer buffer = new VertexBuffer(GlUsage.DYNAMIC_WRITE);
+    protected VertexBuffer buffer;
     protected boolean dirty = true;
     protected int old;
     protected float x, y, z;
@@ -22,6 +22,12 @@ public class Degree360Player extends VideoPlayer implements MetaListener {
 
     public Degree360Player(ClientVideoScreen screen, Vector3f p1, Vector3f p2, Vector3f p3, Vector3f p4) {
         super(screen, p1, p2, p3, p4);
+    }
+
+    @Override
+    public synchronized void init() {
+        super.init();
+        buffer = new VertexBuffer(GlUsage.DYNAMIC_WRITE);
     }
 
     @Override
@@ -70,6 +76,12 @@ public class Degree360Player extends VideoPlayer implements MetaListener {
         skybox = screen.meta.getOrDefault("skybox", 0) != 0;
         vertexCount = vertices.length / 5;
         dirty = true;
+    }
+
+    @Override
+    public synchronized void cleanup() {
+        super.cleanup();
+        buffer.close();
     }
 
     protected static float[] genVertices(float radius, int latSegments, int lonSegments) {
