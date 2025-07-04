@@ -3,7 +3,6 @@ package com.github.squi2rel.vp.video;
 import com.github.squi2rel.vp.ClientVideoScreen;
 import com.github.squi2rel.vp.VideoRenderer;
 import com.github.squi2rel.vp.provider.VideoInfo;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gl.ShaderProgramKeys;
 import net.minecraft.client.render.*;
 import net.minecraft.client.util.math.MatrixStack;
@@ -96,9 +95,10 @@ public interface IVideoPlayer {
         Matrix4f mat = matrices.peek().getPositionMatrix();
         matrices.pop();
         RenderPhase.ShaderProgram program = new RenderPhase.ShaderProgram(ShaderProgramKeys.POSITION_TEX_COLOR);
-        VertexConsumer consumer = immediate.getBuffer(VideoRenderer.VIDEO_QUADS);
+        RenderLayer layer = VideoRenderer.getLayer(getTextureId());
+        VertexConsumer consumer = immediate.getBuffer(layer);
         if (scale == 1) {
-            draw(mat, consumer, getTextureId(), p1, p2, p3, p4, fx ? s.u2 : s.u1, fy ? s.v2 : s.v1, fx ? s.u1 : s.u2, fy ? s.v1 : s.v2);
+            draw(mat, consumer, p1, p2, p3, p4, fx ? s.u2 : s.u1, fy ? s.v2 : s.v1, fx ? s.u1 : s.u2, fy ? s.v1 : s.v2);
             return;
         }
         float inv = (1 - scale) / 2;
@@ -107,15 +107,14 @@ public interface IVideoPlayer {
         } else {
             draw(mat, consumer, s, p1, p2, p3, p4, fx, fy, inv, p3.lerp(p2, inv, tmp3), p4.lerp(p1, inv, tmp4));
         }
-        VideoRenderer.renderQuads(getTextureId(), immediate);
+        immediate.draw(layer);
     }
 
     private void draw(Matrix4f mat, VertexConsumer consumer, ClientVideoScreen s, Vector3f p1, Vector3f p2, Vector3f p3, Vector3f p4, boolean fx, boolean fy, float inv, Vector3f lerp, Vector3f lerp2) {
-        draw(mat, consumer, getTextureId(), p1.lerp(p4, inv, tmp1), p2.lerp(p3, inv, tmp2), lerp, lerp2, fx ? s.u2 : s.u1, fy ? s.v2 : s.v1, fx ? s.u1 : s.u2, fy ? s.v1 : s.v2);
+        draw(mat, consumer, p1.lerp(p4, inv, tmp1), p2.lerp(p3, inv, tmp2), lerp, lerp2, fx ? s.u2 : s.u1, fy ? s.v2 : s.v1, fx ? s.u1 : s.u2, fy ? s.v1 : s.v2);
     }
 
-    default void draw(Matrix4f mat, VertexConsumer consumer, int id, Vector3f p1, Vector3f p2, Vector3f p3, Vector3f p4, float u1, float v1, float u2, float v2) {
-        RenderSystem.bindTexture(id);
+    default void draw(Matrix4f mat, VertexConsumer consumer, Vector3f p1, Vector3f p2, Vector3f p3, Vector3f p4, float u1, float v1, float u2, float v2) {
         int gray = (int) (config.brightness / 100.0 * 255);
         int color = 0xFF000000 | (gray << 16) | (gray << 8) | gray;
         consumer.vertex(mat, p1.x, p1.y, p1.z).texture(u1, v1).color(color);

@@ -11,25 +11,16 @@ import net.minecraft.util.profiler.Profilers;
 import org.joml.Quaternionf;
 import org.lwjgl.opengl.GL11;
 
+import java.util.HashMap;
+
 import static com.github.squi2rel.vp.VideoPlayerClient.*;
 
 @SuppressWarnings({"resource", "DataFlowIssue"})
 public class VideoRenderer {
-    public static int textureId;
-    public static final RenderLayer VIDEO_QUADS = RenderLayer.of(
-            "video_quads",
-            VertexFormats.POSITION_TEXTURE_COLOR,
-            VertexFormat.DrawMode.QUADS,
-            4096,
-            true,
-            true,
-            RenderLayer.MultiPhaseParameters.builder()
-                    .program(new RenderPhase.ShaderProgram(ShaderProgramKeys.POSITION_TEX_COLOR))
-                    .texture(new RenderPhase.TextureBase(() -> RenderSystem.setShaderTexture(0, textureId), () -> {}))
-                    .cull(RenderPhase.DISABLE_CULLING)
-                    .build(true)
-    );
-    public static final RenderLayer VIDEO_TRIANGLES = RenderLayer.of(
+    public static final HashMap<Integer, RenderLayer> quadsCache = new HashMap<>();
+
+    private static int triangleId;
+    private static final RenderLayer VIDEO_TRIANGLES = RenderLayer.of(
             "video_triangles",
             VertexFormats.POSITION_TEXTURE_COLOR,
             VertexFormat.DrawMode.TRIANGLE_STRIP,
@@ -39,13 +30,12 @@ public class VideoRenderer {
             RenderLayer.MultiPhaseParameters.builder()
                     .program(new RenderPhase.ShaderProgram(ShaderProgramKeys.POSITION_TEX_COLOR))
                     .depthTest(RenderPhase.ALWAYS_DEPTH_TEST)
-                    .texture(new RenderPhase.TextureBase(() -> RenderSystem.setShaderTexture(0, textureId), () -> {}))
+                    .texture(new RenderPhase.TextureBase(() -> RenderSystem.setShaderTexture(0, triangleId), () -> {}))
                     .cull(RenderPhase.DISABLE_CULLING)
                     .build(true)
     );
 
-    private static final Quaternionf tmp = new Quaternionf();
-    private static Quaternionf rotation;
+    private static final Quaternionf rotation = new Quaternionf();
     public static float cameraX, cameraY, cameraZ;
     public static boolean skybox;
 
@@ -61,12 +51,13 @@ public class VideoRenderer {
         cameraX = (float) camera.x;
         cameraY = (float) camera.y;
         cameraZ = (float) camera.z;
-        rotation = ctx.camera().getRotation();
+        ctx.camera().getRotation().invert(rotation);
         RenderSystem.setShader(ShaderProgramKeys.POSITION_TEX_COLOR);
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(GL11.GL_LESS);
         RenderSystem.disableCull();
         VertexConsumerProvider.Immediate immediate = (VertexConsumerProvider.Immediate) ctx.consumers();
+        quadsCache.clear();
         int old = RenderSystem.getShaderTexture(0);
         for (ClientVideoScreen screen : screens) {
             try {
@@ -83,12 +74,30 @@ public class VideoRenderer {
         profiler.pop();
     }
 
-    public static void renderQuads(int textureId, VertexConsumerProvider.Immediate immediate) {
-        VideoRenderer.textureId = textureId;
-        immediate.draw(VideoRenderer.VIDEO_QUADS);
+    public static RenderLayer getLayer(int textureId) {
+        return quadsCache.computeIfAbsent(textureId, v -> RenderLayer.of(
+                "video_quad_" + textureId,
+                VertexFormats.POSITION_TEXTURE_COLOR,
+                VertexFormat.DrawMode.QUADS,
+                32,
+                true,
+                true,
+                RenderLayer.MultiPhaseParameters.builder()
+                        .program(new RenderPhase.ShaderProgram(ShaderProgramKeys.POSITION_TEX_COLOR))
+                        .texture(new RenderPhase.TextureBase(() -> RenderSystem.setShaderTexture(0, textureId), () -> {}))
+                        .cull(RenderPhase.DISABLE_CULLING)
+                        .build(true)
+        ));
+    }
+
+    public static void drawTriangles(int textureId, Runnable r) {
+        triangleId = textureId;
+        VIDEO_TRIANGLES.startDrawing();
+        r.run();
+        VIDEO_TRIANGLES.endDrawing();
     }
 
     public static void rotateMatrix(MatrixStack matrices) {
-        matrices.multiply(rotation.invert(tmp));
+        matrices.multiply(rotation);
     }
 }

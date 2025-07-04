@@ -96,9 +96,9 @@ public record ClonePlayer(ClientVideoScreen screen, ClientVideoScreen source) im
     }
 
     @Override
-    public void draw(Matrix4f mat, VertexConsumer consumer, int id, Vector3f p1, Vector3f p2, Vector3f p3, Vector3f p4, float u1, float v1, float u2, float v2) {
+    public void draw(Matrix4f mat, VertexConsumer consumer, Vector3f p1, Vector3f p2, Vector3f p3, Vector3f p4, float u1, float v1, float u2, float v2) {
         boolean fx = source.player.flippedX();
         boolean fy = source.player.flippedY();
-        IVideoPlayer.super.draw(mat, consumer, id, p1, p2, p3, p4, fx ? u2 : u1, fy ? v2 : v1, fx ? u1 : u2, fy ? v1 : v2);
+        IVideoPlayer.super.draw(mat, consumer, p1, p2, p3, p4, fx ? u2 : u1, fy ? v2 : v1, fx ? u1 : u2, fy ? v1 : v2);
     }
 }

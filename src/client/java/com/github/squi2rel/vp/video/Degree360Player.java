@@ -57,9 +57,7 @@ public class Degree360Player extends VideoPlayer implements MetaListener {
             buffer.upload(bufferBuilder.end());
             dirty = false;
         }
-        VideoRenderer.VIDEO_TRIANGLES.startDrawing();
-        buffer.draw(matrices.peek().getPositionMatrix(), RenderSystem.getProjectionMatrix(), RenderSystem.getShader());
-        VideoRenderer.VIDEO_TRIANGLES.endDrawing();
+        VideoRenderer.drawTriangles(getTextureId(), () -> buffer.draw(matrices.peek().getPositionMatrix(), RenderSystem.getProjectionMatrix(), RenderSystem.getShader()));
         matrices.pop();
     }
 
