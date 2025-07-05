@@ -171,13 +171,17 @@ public class VideoPlayer implements IVideoPlayer, MetaListener {
     @Override
     public void draw(Matrix4f mat, VertexConsumer consumer, Vector3f p1, Vector3f p2, Vector3f p3, Vector3f p4, float u1, float v1, float u2, float v2) {
         if (is3d) {
-            if (Vivecraft.isLoaded() && Vivecraft.isRightEye()) {
-                IVideoPlayer.super.draw(mat, consumer, p1, p2, p3, p4, (u1 + u2) / 2, v1, u2, v2);
-            } else {
-                IVideoPlayer.super.draw(mat, consumer, p1, p2, p3, p4, u1, v1, (u1 + u2) / 2, v2);
-            }
+            draw3D(mat, consumer, p1, p2, p3, p4, u1, v1, u2, v2);
             return;
         }
         IVideoPlayer.super.draw(mat, consumer, p1, p2, p3, p4, u1, v1, u2, v2);
+    }
+
+    public void draw3D(Matrix4f mat, VertexConsumer consumer, Vector3f p1, Vector3f p2, Vector3f p3, Vector3f p4, float u1, float v1, float u2, float v2) {
+        if (Vivecraft.isLoaded() && Vivecraft.isRightEye()) {
+            IVideoPlayer.super.draw(mat, consumer, p1, p2, p3, p4, (u1 + u2) / 2, v1, u2, v2);
+        } else {
+            IVideoPlayer.super.draw(mat, consumer, p1, p2, p3, p4, u1, v1, (u1 + u2) / 2, v2);
+        }
     }
 }
