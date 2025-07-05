@@ -5,6 +5,7 @@ import com.github.squi2rel.vp.network.VideoPayload;
 import com.github.squi2rel.vp.provider.VideoInfo;
 import com.github.squi2rel.vp.provider.VideoProviders;
 import com.github.squi2rel.vp.video.*;
+import com.github.squi2rel.vp.vivecraft.Vivecraft;
 import com.google.gson.Gson;
 import com.mojang.brigadier.arguments.*;
 import com.mojang.brigadier.context.CommandContext;
@@ -126,6 +127,7 @@ public class VideoPlayerClient implements ClientModInitializer {
             screens.clear();
             currentLooking = null;
         });
+        if (Vivecraft.isLoaded()) LOGGER.info("Found Vivecraft");
         ClientPlayConnectionEvents.JOIN.register((h, s, c) -> {
             if (config.alwaysConnected) ClientPacketHandler.config(VideoPlayerMain.version);
         });

@@ -2,21 +2,25 @@ package com.github.squi2rel.vp.video;
 
 import com.github.squi2rel.vp.ClientVideoScreen;
 import com.github.squi2rel.vp.provider.VideoInfo;
+import com.github.squi2rel.vp.vivecraft.Vivecraft;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.render.VertexConsumer;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 import java.nio.ByteBuffer;
 
 import static com.github.squi2rel.vp.VideoPlayerClient.config;
 
-public class VideoPlayer implements IVideoPlayer {
+public class VideoPlayer implements IVideoPlayer, MetaListener {
     public final Vector3f p1, p2, p3, p4;
     protected VlcDecoder decoder;
     protected VideoQuad quad;
     protected boolean initialized = false;
     protected boolean changed = false;
     protected long targetTime = -1;
+    protected boolean is3d = false;
     public int videoWidth, videoHeight;
 
     protected final ClientVideoScreen screen;
@@ -70,7 +74,7 @@ public class VideoPlayer implements IVideoPlayer {
 
     @Override
     public int getWidth() {
-        return videoWidth;
+        return is3d ? videoWidth / 2 : videoWidth;
     }
 
     @Override
@@ -157,5 +161,23 @@ public class VideoPlayer implements IVideoPlayer {
         initialized = false;
         if (decoder != null) decoder.cleanup();
         if (quad != null) quad.cleanup();
+    }
+
+    @Override
+    public void onMetaChanged() {
+        is3d = screen.meta.getOrDefault("3d", 0) != 0;
+    }
+
+    @Override
+    public void draw(Matrix4f mat, VertexConsumer consumer, Vector3f p1, Vector3f p2, Vector3f p3, Vector3f p4, float u1, float v1, float u2, float v2) {
+        if (is3d) {
+            if (Vivecraft.isLoaded() && Vivecraft.isRightEye()) {
+                IVideoPlayer.super.draw(mat, consumer, p1, p2, p3, p4, (u1 + u2) / 2, v1, u2, v2);
+            } else {
+                IVideoPlayer.super.draw(mat, consumer, p1, p2, p3, p4, u1, v1, (u1 + u2) / 2, v2);
+            }
+            return;
+        }
+        IVideoPlayer.super.draw(mat, consumer, p1, p2, p3, p4, u1, v1, u2, v2);
     }
 }
