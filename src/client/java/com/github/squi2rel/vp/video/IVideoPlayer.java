@@ -1,7 +1,7 @@
 package com.github.squi2rel.vp.video;
 
 import com.github.squi2rel.vp.ClientVideoScreen;
-import com.github.squi2rel.vp.VideoRenderer;
+import com.github.squi2rel.vp.ScreenRenderer;
 import com.github.squi2rel.vp.provider.VideoInfo;
 import net.minecraft.client.gl.ShaderProgramKeys;
 import net.minecraft.client.render.*;
@@ -91,11 +91,11 @@ public interface IVideoPlayer {
         boolean fx = flippedX();
         boolean fy = flippedY();
         matrices.push();
-        matrices.translate(-VideoRenderer.cameraX, -VideoRenderer.cameraY, -VideoRenderer.cameraZ);
+        matrices.translate(-ScreenRenderer.cameraX, -ScreenRenderer.cameraY, -ScreenRenderer.cameraZ);
         Matrix4f mat = matrices.peek().getPositionMatrix();
         matrices.pop();
         RenderPhase.ShaderProgram program = new RenderPhase.ShaderProgram(ShaderProgramKeys.POSITION_TEX_COLOR);
-        RenderLayer layer = VideoRenderer.getLayer(getTextureId());
+        RenderLayer layer = ScreenRenderer.getLayer(getTextureId());
         VertexConsumer consumer = immediate.getBuffer(layer);
         if (scale == 1) {
             draw(mat, consumer, p1, p2, p3, p4, fx ? s.u2 : s.u1, fy ? s.v2 : s.v1, fx ? s.u1 : s.u2, fy ? s.v1 : s.v2);

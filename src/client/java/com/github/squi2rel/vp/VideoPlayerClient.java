@@ -127,12 +127,12 @@ public class VideoPlayerClient implements ClientModInitializer {
             screens.clear();
             currentLooking = null;
         });
-        if (Vivecraft.isLoaded()) LOGGER.info("Found Vivecraft");
+        if (Vivecraft.loaded) LOGGER.info("Found Vivecraft");
         ClientPlayConnectionEvents.JOIN.register((h, s, c) -> {
             if (config.alwaysConnected) ClientPacketHandler.config(VideoPlayerMain.version);
         });
         WorldRenderEvents.AFTER_SETUP.register(e -> VideoPlayerClient.update());
-        WorldRenderEvents.AFTER_ENTITIES.register(VideoRenderer::render);
+        WorldRenderEvents.AFTER_ENTITIES.register(ScreenRenderer::render);
         WorldRenderEvents.END.register(e -> VideoPlayerClient.postUpdate());
         ClientPlayNetworking.registerGlobalReceiver(VideoPayload.ID, (p, c) -> client.execute(() -> {
             ByteBuf buf = Unpooled.wrappedBuffer(p.data());

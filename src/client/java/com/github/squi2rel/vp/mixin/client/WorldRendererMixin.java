@@ -1,7 +1,7 @@
 package com.github.squi2rel.vp.mixin.client;
 
 import com.github.squi2rel.vp.CameraRenderer;
-import com.github.squi2rel.vp.VideoRenderer;
+import com.github.squi2rel.vp.ScreenRenderer;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.Frustum;
@@ -26,6 +26,6 @@ public class WorldRendererMixin {
 
     @Inject(method = "renderClouds", at = @At("HEAD"), cancellable = true)
     public void noClouds(CallbackInfo ci) {
-        if (VideoRenderer.skybox) ci.cancel();
+        if (ScreenRenderer.skybox) ci.cancel();
     }
 }

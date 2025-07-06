@@ -1,5 +1,6 @@
 package com.github.squi2rel.vp;
 
+import com.github.squi2rel.vp.vivecraft.Vivecraft;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.minecraft.client.gl.ShaderProgramKeys;
@@ -16,8 +17,8 @@ import java.util.HashMap;
 import static com.github.squi2rel.vp.VideoPlayerClient.*;
 
 @SuppressWarnings({"resource", "DataFlowIssue"})
-public class VideoRenderer {
-    public static final HashMap<Integer, RenderLayer> quadsCache = new HashMap<>();
+public class ScreenRenderer {
+    private static final HashMap<Integer, RenderLayer> quadsCache = new HashMap<>();
 
     private static int triangleId;
     private static final RenderLayer VIDEO_TRIANGLES = RenderLayer.of(
@@ -51,7 +52,11 @@ public class VideoRenderer {
         cameraX = (float) camera.x;
         cameraY = (float) camera.y;
         cameraZ = (float) camera.z;
-        ctx.camera().getRotation().invert(rotation);
+        if (Vivecraft.loaded && Vivecraft.isVRActive()) {
+            rotation.setFromNormalized(Vivecraft.getRotation()).invert();
+        } else {
+            ctx.camera().getRotation().invert(rotation);
+        }
         RenderSystem.setShader(ShaderProgramKeys.POSITION_TEX_COLOR);
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(GL11.GL_LESS);
