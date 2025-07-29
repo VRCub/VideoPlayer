@@ -15,8 +15,6 @@ import uk.co.caprica.vlcj.player.embedded.videosurface.callback.RenderCallback;
 import java.nio.ByteBuffer;
 import java.util.function.BiConsumer;
 
-import static com.github.squi2rel.vp.video.StreamListener.runAsync;
-
 public class VlcDecoder {
     private static MediaPlayerFactory factory;
     private final EmbeddedMediaPlayer mediaPlayer;
@@ -60,7 +58,7 @@ public class VlcDecoder {
 
             @Override
             public void error(MediaPlayer mediaPlayer) {
-                mediaPlayer.controls().stop();
+                mediaPlayer.submit(() -> mediaPlayer.controls().stop());
             }
         });
         mediaPlayer.video().setAdjustVideo(false);
@@ -84,6 +82,10 @@ public class VlcDecoder {
         this.playListener = playListener;
     }
 
+    public void submit(Runnable r) {
+        mediaPlayer.submit(r);
+    }
+
     public void init(VideoInfo info) {
         mediaPlayer.media().play(info.path(), info.params());
     }
@@ -94,13 +96,11 @@ public class VlcDecoder {
 
     public void cleanup() {
         stop();
-        Thread t = new Thread(mediaPlayer::release);
-        t.setDaemon(true);
-        t.start();
+        mediaPlayer.submit(mediaPlayer::release);
     }
 
     public void stop() {
-        runAsync(() -> mediaPlayer.controls().stop());
+        mediaPlayer.submit(() -> mediaPlayer.controls().stop());
         glBuffer = null;
         buffer = null;
     }
