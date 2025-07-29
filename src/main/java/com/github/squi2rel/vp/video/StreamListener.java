@@ -21,6 +21,7 @@ public class StreamListener implements IVideoListener {
     private static final MediaPlayerEventAdapter callback = new MediaPlayerEventAdapter() {
         @Override
         public void playing(MediaPlayer mediaPlayer) {
+            System.out.println("playing event triggered");
             StreamListener listener = references.get(mediaPlayer);
             if (listener == null) return;
             listener.playing.accept(listener.player.status().isSeekable());
@@ -28,16 +29,19 @@ public class StreamListener implements IVideoListener {
 
         @Override
         public void stopped(MediaPlayer mediaPlayer) {
+            System.out.println("stopped event triggered");
             finish(mediaPlayer);
         }
 
         @Override
         public void finished(MediaPlayer mediaPlayer) {
+            System.out.println("Finished event triggered");
             finish(mediaPlayer);
         }
 
         @Override
         public void error(MediaPlayer mediaPlayer) {
+            System.out.println("errored event triggered");
             StreamListener listener = references.get(mediaPlayer);
             if (listener == null) return;
             synchronized (listener) {
@@ -46,9 +50,11 @@ public class StreamListener implements IVideoListener {
                 listener.errored.run();
                 listener.stopped.run();
                 listener.player = null;
+                runAsync(() -> {
+                    mediaPlayer.controls().stop();
+                    mediaPlayer.release();
+                });
             }
-            mediaPlayer.controls().stopAsync();
-            mediaPlayer.release();
         }
     };
 
@@ -58,8 +64,8 @@ public class StreamListener implements IVideoListener {
         synchronized (listener) {
             if (listener.player == null) return;
             references.remove(mediaPlayer);
-            listener.stopped.run();
             listener.player = null;
+            listener.stopped.run();
         }
         mediaPlayer.release();
     }
@@ -79,7 +85,7 @@ public class StreamListener implements IVideoListener {
                     timeout.run();
                     stopped.run();
                 }
-                p.controls().stopAsync();
+                p.controls().stop();
                 p.release();
             } catch (Exception ignored) {
             }
@@ -136,7 +142,7 @@ public class StreamListener implements IVideoListener {
             player = null;
         }
         runAsync(() -> {
-            p.controls().stopAsync();
+            p.controls().stop();
             p.release();
         });
     }

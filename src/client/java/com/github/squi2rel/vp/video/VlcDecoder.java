@@ -6,16 +6,16 @@ import org.lwjgl.BufferUtils;
 import uk.co.caprica.vlcj.factory.MediaPlayerFactory;
 import uk.co.caprica.vlcj.player.base.MediaPlayer;
 import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter;
-import uk.co.caprica.vlcj.player.base.VideoFitMode;
 import uk.co.caprica.vlcj.player.embedded.EmbeddedMediaPlayer;
 import uk.co.caprica.vlcj.player.embedded.videosurface.CallbackVideoSurface;
 import uk.co.caprica.vlcj.player.embedded.videosurface.callback.BufferFormat;
 import uk.co.caprica.vlcj.player.embedded.videosurface.callback.BufferFormatCallbackAdapter;
 import uk.co.caprica.vlcj.player.embedded.videosurface.callback.RenderCallback;
-import uk.co.caprica.vlcj.player.embedded.videosurface.callback.format.StandardBufferFormat;
 
 import java.nio.ByteBuffer;
 import java.util.function.BiConsumer;
+
+import static com.github.squi2rel.vp.video.StreamListener.runAsync;
 
 public class VlcDecoder {
     private static MediaPlayerFactory factory;
@@ -44,9 +44,9 @@ public class VlcDecoder {
                         sizeListener.accept(width, height);
                     }
                 }
-                return new StandardBufferFormat(sourceWidth, sourceHeight);
+                return new RGBAFormat(sourceWidth, sourceHeight);
             }
-        }, callback, true));
+        }, callback, true, (a, b) -> {}));
         mediaPlayer.events().addMediaPlayerEventListener(new MediaPlayerEventAdapter() {
             @Override
             public void playing(MediaPlayer mediaPlayer) {
@@ -60,10 +60,9 @@ public class VlcDecoder {
 
             @Override
             public void error(MediaPlayer mediaPlayer) {
-                mediaPlayer.controls().stopAsync();
+                mediaPlayer.controls().stop();
             }
         });
-        mediaPlayer.video().setDisplayFit(VideoFitMode.NONE);
         mediaPlayer.video().setAdjustVideo(false);
     }
 
@@ -101,7 +100,7 @@ public class VlcDecoder {
     }
 
     public void stop() {
-        mediaPlayer.controls().stopAsync();
+        runAsync(() -> mediaPlayer.controls().stop());
         glBuffer = null;
         buffer = null;
     }
@@ -167,6 +166,12 @@ public class VlcDecoder {
 
         @Override
         public void unlock(MediaPlayer m) {
+        }
+    }
+
+    public static class RGBAFormat extends BufferFormat {
+        public RGBAFormat(int width, int height) {
+            super("RGBA", width, height, new int[] {width * 4}, new int[] {height});
         }
     }
 }

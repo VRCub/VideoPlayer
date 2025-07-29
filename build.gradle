@@ -50,9 +50,9 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
-	implementation "uk.co.caprica:vlcj:5.0.0-M4"
-	include "uk.co.caprica:vlcj:5.0.0-M4"
-	include "uk.co.caprica:vlcj-natives:5.0.0-M4"
+	implementation "uk.co.caprica:vlcj:4.10.1"
+	include "uk.co.caprica:vlcj:4.10.1"
+	include "uk.co.caprica:vlcj-natives:4.10.1"
 
 	modCompileOnly "maven.modrinth:vivecraft:1.21.4-1.2.5-fabric"
 }
