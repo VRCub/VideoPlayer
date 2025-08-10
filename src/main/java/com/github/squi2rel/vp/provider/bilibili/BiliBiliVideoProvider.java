@@ -2,6 +2,8 @@ package com.github.squi2rel.vp.provider.bilibili;
 
 import com.github.squi2rel.vp.provider.IProviderSource;
 import com.github.squi2rel.vp.provider.VideoInfo;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.jetbrains.annotations.Nullable;
@@ -9,6 +11,7 @@ import org.jetbrains.annotations.Nullable;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -16,6 +19,7 @@ public class BiliBiliVideoProvider extends BiliBiliProvider {
     public static final String FETCH_URL = "https://api.bilibili.com/x/web-interface/view?bvid=%s";
     public static final String PLAY_URL = "https://api.bilibili.com/x/player/playurl?bvid=%s&cid=%s&qn=80&platform=html5";
     public static final Pattern REGEX = Pattern.compile("(?<=^|/)(BV[0-9A-Za-z]{10})(?:\\?p=(\\d+))?");
+    private static final Cache<String, VideoCache> CACHE = CacheBuilder.newBuilder().expireAfterAccess(10, TimeUnit.MINUTES).maximumSize(1024).build();
 
     @Override
     public @Nullable CompletableFuture<VideoInfo> from(String str, IProviderSource source) {
@@ -23,6 +27,11 @@ public class BiliBiliVideoProvider extends BiliBiliProvider {
         if (!matcher.find()) return null;
         String bvid = matcher.group(1);
         Integer p = matcher.group(2) != null ? Integer.valueOf(matcher.group(2)) : null;
+        String key = bvid + "?p=" + p;
+        VideoCache cache = CACHE.getIfPresent(key);
+        if (cache != null && System.currentTimeMillis() < cache.expireTime) {
+            return CompletableFuture.completedFuture(new VideoInfo(source.name(), cache.title, cache.url, str, cache.expireTime, true, VLC_PARAMS));
+        }
         return CompletableFuture.supplyAsync(() -> {
             try (HttpClient client = HttpClient.newHttpClient()) {
                 HttpResponse<String> response = client.send(makeRequest(String.format(FETCH_URL, bvid)), HttpResponse.BodyHandlers.ofString());
@@ -43,11 +52,15 @@ public class BiliBiliVideoProvider extends BiliBiliProvider {
                 HttpResponse<String> response = client.send(makeRequest(String.format(PLAY_URL, bvid, meta.cid())), HttpResponse.BodyHandlers.ofString());
                 JsonObject root = JsonParser.parseString(response.body()).getAsJsonObject();
                 String url = root.getAsJsonObject("data").getAsJsonArray("durl").get(0).getAsJsonObject().get("url").getAsString();
-                return new VideoInfo(source.name(), meta.title(), url, str, System.currentTimeMillis() + 1000 * 60 * 60 * 2, true, VLC_PARAMS);
+                long expire = System.currentTimeMillis() + 1000 * 60 * 60 * 2;
+                CACHE.put(key, new VideoCache(meta.title(), url, expire));
+                return new VideoInfo(source.name(), meta.title(), url, str, expire, true, VLC_PARAMS);
             } catch (Exception e) {
                 source.reply(e.toString());
                 return null;
             }
         });
     }
+
+    private record VideoCache(String title, String url, long expireTime) {}
 }

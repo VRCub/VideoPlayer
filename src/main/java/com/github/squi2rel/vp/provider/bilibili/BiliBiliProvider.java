@@ -16,7 +16,7 @@ public abstract class BiliBiliProvider implements IVideoProvider {
     public static String biliTicket;
     public static long expireTime;
 
-    protected HttpRequest makeRequest(String url) {
+    protected static HttpRequest makeRequest(String url) {
         HttpRequest.Builder builder = HttpRequest.newBuilder().uri(URI.create(url))
                 .header("User-Agent", UA)
                 .header("Referer", "https://www.bilibili.com");

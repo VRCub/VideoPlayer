@@ -83,7 +83,7 @@ public class ClientPacketHandler {
             case SYNC -> {
                 String areaName = readName(buf);
                 String name = ByteBufUtils.readString(buf, 32);
-                areas.get(areaName).getScreen(name).player.setProgress(buf.readLong());
+                areas.get(areaName).getScreen(name).setProgress(buf.readLong());
             }
             case CREATE_AREA -> areas.put(readName(buf), ClientVideoArea.read(buf));
             case REMOVE_AREA -> areas.remove(readName(buf)).remove();

@@ -106,6 +106,11 @@ public class ClientVideoScreen extends VideoScreen {
         return startTime;
     }
 
+    public void setProgress(long progress) {
+        player.setProgress(progress);
+        startTime = System.currentTimeMillis() - progress;
+    }
+
     public void unload() {
         VideoPlayerClient.screens.remove(this);
         if (player != null) player.cleanup();
