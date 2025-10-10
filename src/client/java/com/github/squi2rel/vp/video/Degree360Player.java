@@ -1,6 +1,5 @@
 package com.github.squi2rel.vp.video;
 
-import com.github.squi2rel.vp.ClientVideoScreen;
 import com.github.squi2rel.vp.ScreenRenderer;
 import com.github.squi2rel.vp.vivecraft.Vivecraft;
 import com.mojang.blaze3d.systems.RenderSystem;

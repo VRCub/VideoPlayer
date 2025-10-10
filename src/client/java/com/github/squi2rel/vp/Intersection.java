@@ -1,5 +1,6 @@
 package com.github.squi2rel.vp;
 
+import com.github.squi2rel.vp.video.ClientVideoScreen;
 import org.joml.Vector3f;
 
 public class Intersection {

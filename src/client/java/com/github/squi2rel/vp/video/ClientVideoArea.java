@@ -1,6 +1,5 @@
 package com.github.squi2rel.vp.video;
 
-import com.github.squi2rel.vp.ClientVideoScreen;
 import com.github.squi2rel.vp.network.ByteBufUtils;
 import io.netty.buffer.ByteBuf;
 import org.joml.Vector3f;

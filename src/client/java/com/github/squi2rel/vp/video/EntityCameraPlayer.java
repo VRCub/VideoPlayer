@@ -1,7 +1,6 @@
 package com.github.squi2rel.vp.video;
 
 import com.github.squi2rel.vp.CameraRenderer;
-import com.github.squi2rel.vp.ClientVideoScreen;
 import com.github.squi2rel.vp.mixin.client.ClientWorldAccessor;
 import com.github.squi2rel.vp.provider.VideoInfo;
 import net.minecraft.client.MinecraftClient;

@@ -1,5 +1,6 @@
 package com.github.squi2rel.vp;
 
+import com.github.squi2rel.vp.video.ClientVideoScreen;
 import com.github.squi2rel.vp.vivecraft.Vivecraft;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;

@@ -1,6 +1,5 @@
 package com.github.squi2rel.vp.video;
 
-import com.github.squi2rel.vp.ClientVideoScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.Framebuffer;
 import net.minecraft.client.gl.SimpleFramebuffer;

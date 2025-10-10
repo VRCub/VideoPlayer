@@ -128,7 +128,7 @@ public class StreamListener implements IVideoListener {
     @Override
     public void listen() {
         references.put(player, this);
-        player.media().play(info.path(), info.params());
+        player.media().play(info.path().replace("rtspt://", "rtsp://"), info.params());
     }
 
     @Override

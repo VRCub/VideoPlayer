@@ -46,7 +46,7 @@ public class NetworkProvider implements IVideoProvider {
         String name = "Unknown Stream";
         if (path.startsWith("http") && path.contains(".m3u8")) {
             name = "HLS Stream";
-        } else if (path.startsWith("rtsp://")) {
+        } else if (path.startsWith("rtsp://") || path.startsWith("rtspt://")) {
             name = "RTSP Stream";
         } else if (path.startsWith("http")) {
             name = "HTTP Stream";

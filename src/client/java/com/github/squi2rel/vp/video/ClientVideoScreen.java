@@ -1,7 +1,7 @@
-package com.github.squi2rel.vp;
+package com.github.squi2rel.vp.video;
 
+import com.github.squi2rel.vp.VideoPlayerClient;
 import com.github.squi2rel.vp.provider.VideoInfo;
-import com.github.squi2rel.vp.video.*;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.util.math.MatrixStack;

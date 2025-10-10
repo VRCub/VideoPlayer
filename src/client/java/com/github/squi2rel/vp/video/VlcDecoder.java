@@ -61,7 +61,6 @@ public class VlcDecoder {
                 mediaPlayer.submit(() -> mediaPlayer.controls().stop());
             }
         });
-        mediaPlayer.video().setAdjustVideo(false);
     }
 
     public static void load() {
@@ -87,7 +86,7 @@ public class VlcDecoder {
     }
 
     public void init(VideoInfo info) {
-        mediaPlayer.media().play(info.path(), info.params());
+        mediaPlayer.media().play(info.path().replace("rtspt://", "rtsp://"), info.params());
     }
 
     public ByteBuffer decodeNextFrame() {
