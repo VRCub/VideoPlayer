@@ -54,7 +54,7 @@ dependencies {
 	include "uk.co.caprica:vlcj:4.10.1"
 	include "uk.co.caprica:vlcj-natives:4.8.3"
 
-	modCompileOnly "maven.modrinth:vivecraft:1.21.4-1.2.5-fabric"
+	modCompileOnly "maven.modrinth:vivecraft:1.21.4-1.3.2-fabric"
 }
 
 processResources {

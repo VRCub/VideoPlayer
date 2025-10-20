@@ -658,4 +658,21 @@ public class VideoPlayerClient implements ClientModInitializer {
             }
         }
     }
+
+    public static Object getEnumValue(String constantName, String... paths) {
+        for (String path : paths) {
+            try {
+                Class<?> clazz = Class.forName(path);
+                if (clazz.isEnum()) {
+                    @SuppressWarnings({"unchecked", "rawtypes"})
+                    Object enumValue = Enum.valueOf((Class<Enum>) clazz.asSubclass(Enum.class), constantName);
+                    return enumValue;
+                }
+            } catch (ClassNotFoundException ignored) {
+            } catch (IllegalArgumentException e) {
+                System.err.println("Enum found, but constant not present: " + constantName);
+            }
+        }
+        throw new RuntimeException("Enum constant not found in any known path: " + constantName);
+    }
 }

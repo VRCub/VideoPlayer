@@ -43,7 +43,10 @@ public class DataHolder {
                 if (area.inBounds(player.getPos())) {
                     if (area.addPlayer(player.getUuid())) {
                         ServerPacketHandler.sendTo(player, ServerPacketHandler.createArea(area));
-                        if (area.screens.isEmpty()) continue;
+                        if (area.screens.isEmpty()) {
+                            ServerPacketHandler.sendTo(player, ServerPacketHandler.loadArea(area));
+                            continue;
+                        }
                         ServerPacketHandler.sendTo(player, ServerPacketHandler.createScreen(area.screens));
                         ServerPacketHandler.sendTo(player, ServerPacketHandler.loadArea(area));
                         ServerPacketHandler.sendTo(player, ServerPacketHandler.updatePlaylist(area.screens));

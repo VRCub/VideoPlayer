@@ -11,7 +11,7 @@ import static com.github.squi2rel.vp.VideoPlayerMain.LOGGER;
 
 public abstract class BiliBiliProvider implements IVideoProvider {
     public static final String UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0";
-    public static final String[] VLC_PARAMS = {":http-user-agent=" + UA, ":http-referrer=https://www.bilibili.com", ":input-fast-seek"};
+    public static final String[] VLC_PARAMS = {":http-user-agent=" + UA, ":http-referrer=https://www.bilibili.com"};
 
     public static String biliTicket;
     public static long expireTime;
