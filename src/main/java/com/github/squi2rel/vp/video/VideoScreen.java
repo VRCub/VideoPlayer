@@ -1,6 +1,7 @@
 package com.github.squi2rel.vp.video;
 
 import com.github.squi2rel.vp.DataHolder;
+import com.github.squi2rel.vp.VideoPlayerMain;
 import com.github.squi2rel.vp.network.ByteBufUtils;
 import com.github.squi2rel.vp.network.ServerPacketHandler;
 import com.github.squi2rel.vp.provider.NamedProviderSource;
@@ -12,6 +13,7 @@ import org.joml.Vector3f;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static com.github.squi2rel.vp.DataHolder.server;
@@ -196,12 +198,12 @@ public class VideoScreen {
             if (s == null) return;
             synchronized (this) {
                 nextTask = null;
-                s.stopped(() -> {
+                s.stopped(() -> VideoPlayerMain.scheduler.schedule(() -> {
                     lock();
                     infos.poll();
                     unlock();
                     playNext();
-                });
+                }, 2, TimeUnit.SECONDS));
                 s.listen();
             }
         });

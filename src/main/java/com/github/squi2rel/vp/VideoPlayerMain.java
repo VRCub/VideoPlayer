@@ -20,12 +20,17 @@ import net.minecraft.text.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+
 public class VideoPlayerMain implements ModInitializer {
     public static final String MOD_ID = "videoplayer";
     public static final String version = FabricLoader.getInstance().getModContainer(MOD_ID).orElseThrow().getMetadata().getVersion().toString();
     public static Throwable error = null;
 
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+
+    public static ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, VideoPlayerMain::newDaemon);
 
     @SuppressWarnings("resource")
     @Override
@@ -59,5 +64,11 @@ public class VideoPlayerMain implements ModInitializer {
             ServerPacketHandler.sendTo(s.getSource().getPlayer(), ServerPacketHandler.execute(s.getArgument("command", String.class)));
             return 1;
         }))));
+    }
+
+    private static Thread newDaemon(Runnable task) {
+        Thread t = new Thread(task);
+        t.setDaemon(true);
+        return t;
     }
 }
