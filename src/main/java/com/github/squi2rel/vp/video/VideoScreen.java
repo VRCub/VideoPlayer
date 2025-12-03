@@ -79,6 +79,10 @@ public class VideoScreen {
         playNext();
     }
 
+    public int skipped() {
+        return skipped.size();
+    }
+
     public synchronized void addInfo(VideoInfo info) {
         LOGGER.info("added info: {} {} {}", info.playerName(), info.name(), info.path());
         lock();

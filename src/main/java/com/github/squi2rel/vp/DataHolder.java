@@ -9,6 +9,8 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -50,11 +52,13 @@ public class DataHolder {
                         ServerPacketHandler.sendTo(player, ServerPacketHandler.createScreen(area.screens));
                         ServerPacketHandler.sendTo(player, ServerPacketHandler.loadArea(area));
                         ServerPacketHandler.sendTo(player, ServerPacketHandler.updatePlaylist(area.screens));
+                        player.sendMessage(Text.literal("进入观影区 " + area.name).formatted(Formatting.DARK_AQUA));
                     }
                 } else {
                     if (area.removePlayer(player.getUuid())) {
                         ServerPacketHandler.sendTo(player, ServerPacketHandler.unloadArea(area));
                         ServerPacketHandler.sendTo(player, ServerPacketHandler.removeArea(area));
+                        player.sendMessage(Text.literal("离开观影区 " + area.name).formatted(Formatting.DARK_AQUA));
                     }
                 }
             }
