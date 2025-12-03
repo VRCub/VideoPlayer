@@ -195,10 +195,18 @@ public class VideoScreen {
             synchronized (this) {
                 nextTask = null;
                 s.stopped(() -> {
-                    lock();
-                    infos.poll();
-                    unlock();
-                    playNext();
+                    // 延迟两秒后再执行skip逻辑
+                    new Thread(() -> {
+                        try {
+                            Thread.sleep(2000);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        }
+                        lock();
+                        infos.poll();
+                        unlock();
+                        playNext();
+                    }).start();
                 });
                 s.listen();
             }
