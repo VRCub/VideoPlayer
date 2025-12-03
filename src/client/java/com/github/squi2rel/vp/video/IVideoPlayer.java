@@ -2,7 +2,6 @@ package com.github.squi2rel.vp.video;
 
 import com.github.squi2rel.vp.ScreenRenderer;
 import com.github.squi2rel.vp.provider.VideoInfo;
-import net.minecraft.client.gl.ShaderProgramKeys;
 import net.minecraft.client.render.*;
 import net.minecraft.client.util.math.MatrixStack;
 import org.jetbrains.annotations.Nullable;
@@ -76,26 +75,26 @@ public interface IVideoPlayer {
         ClientVideoScreen screen = screen();
         if (screen == null || screen.player == null) return;
         Vector3f p1 = s.p1, p2 = s.p2, p3 = s.p3, p4 = s.p4;
-        float sx = p1.sub(p4, tmp1).length() / (getWidth() * Math.abs(s.u1 - s.u2));
-        float sy = p1.sub(p2, tmp1).length() / (getHeight() * Math.abs(s.v1 - s.v2));
-        boolean vertical;
-        float scale;
-        if (sx < sy) {
-            scale = sx / sy;
-            vertical = true;
-        } else {
-            scale = sy / sx;
-            vertical = false;
-        }
+        float sx = p1.sub(p4, tmp1).length() / (getWidth() * Math.abs(s.u1 - s.u2)) * s.scaleX;
+        float sy = p1.sub(p2, tmp1).length() / (getHeight() * Math.abs(s.v1 - s.v2)) * s.scaleY;
         boolean fx = flippedX();
         boolean fy = flippedY();
         matrices.push();
         matrices.translate(-ScreenRenderer.cameraX, -ScreenRenderer.cameraY, -ScreenRenderer.cameraZ);
         Matrix4f mat = matrices.peek().getPositionMatrix();
         matrices.pop();
-        RenderPhase.ShaderProgram program = new RenderPhase.ShaderProgram(ShaderProgramKeys.POSITION_TEX_COLOR);
         RenderLayer layer = ScreenRenderer.getLayer(getTextureId());
         VertexConsumer consumer = immediate.getBuffer(layer);
+        boolean vertical = false;
+        float scale = 1;
+        if (!s.fill) {
+            if (sx < sy) {
+                scale = sx / sy;
+                vertical = true;
+            } else {
+                scale = sy / sx;
+            }
+        }
         if (scale == 1) {
             draw(mat, consumer, p1, p2, p3, p4, fx ? s.u2 : s.u1, fy ? s.v2 : s.v1, fx ? s.u1 : s.u2, fy ? s.v1 : s.v2);
             return;

@@ -70,6 +70,7 @@ public class VideoPlayerClient implements ClientModInitializer {
     public static float remoteControlId = -1;
     public static float remoteControlRange = 64;
     public static float noControlRange = 16;
+    public static boolean remoteControl = false;
 
     public static boolean updated = false;
     public static Runnable disconnectHandler = () -> {};
@@ -421,13 +422,39 @@ public class VideoPlayerClient implements ClientModInitializer {
                                                             return 1;
                                                         })))
                                 )))
+                .then(ClientCommandManager.literal("scale")
+                        .then(ClientCommandManager.argument("area", StringArgumentType.string()).suggests(SUGGEST_AREAS)
+                                .then(ClientCommandManager.argument("screen", StringArgumentType.string()).suggests(SUGGEST_SCREENS)
+                                        .then(ClientCommandManager.literal("fill")
+                                                .executes(s -> {
+                                                    ClientVideoScreen screen = getScreen(s);
+                                                    if (screen == null) return 0;
+                                                    ClientPacketHandler.setScale(screen, true, 1, 1);
+                                                    return 1;
+                                                }))
+                                        .then(ClientCommandManager.literal("auto")
+                                                .executes(s -> {
+                                                    ClientVideoScreen screen = getScreen(s);
+                                                    if (screen == null) return 0;
+                                                    ClientPacketHandler.setScale(screen, false, 1, 1);
+                                                    return 1;
+                                                }))
+                                        .then(ClientCommandManager.literal("stretch")
+                                                .then(ClientCommandManager.argument("scaleX", FloatArgumentType.floatArg(0.0625f, 16f))
+                                                        .then(ClientCommandManager.argument("scaleY", FloatArgumentType.floatArg(0.0625f, 16f))
+                                                                .executes(s -> {
+                                                                    ClientVideoScreen screen = getScreen(s);
+                                                                    if (screen == null) return 0;
+                                                                    ClientPacketHandler.setScale(screen, false, s.getArgument("scaleX", Float.class), s.getArgument("scaleY", Float.class));
+                                                                    return 1;
+                                                                })))))))
         ));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.player == null || client.world == null || client.currentScreen != null || currentLooking == null) return;
             boolean pressed = client.options.useKey.isPressed();
             if (pressed && !keyPressed) {
                 keyPressed = true;
-                if (client.player.getStackInHand(Hand.MAIN_HAND).isEmpty() && client.player.getStackInHand(Hand.OFF_HAND).isEmpty()) {
+                if (remoteControl || client.player.getStackInHand(Hand.MAIN_HAND).isEmpty() && client.player.getStackInHand(Hand.OFF_HAND).isEmpty()) {
                     ClientPacketHandler.openMenu(currentLooking);
                 }
             } else if (!pressed) {
@@ -543,7 +570,7 @@ public class VideoPlayerClient implements ClientModInitializer {
 
         Vector3f lineStart = new Vector3f(eyePos.toVector3f());
 
-        boolean remoteControl = false;
+        remoteControl = false;
         for (ItemStack item : client.player.getHandItems()) {
             if (!Registries.ITEM.getId(item.getItem()).toString().equals(remoteControlName)) continue;
             CustomModelDataComponent data = item.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA);

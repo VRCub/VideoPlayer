@@ -192,6 +192,26 @@ public class ServerPacketHandler {
                     area.forEachPlayer(p -> sendTo(pm.getPlayer(p), data));
                 }
             }
+            case SET_SCALE -> {
+                VideoArea area = getArea(player, readName(buf));
+                if (area == null) return;
+                VideoScreen screen = area.getScreen(readName(buf));
+                if (screen == null) return;
+                boolean fill = buf.readBoolean();
+                float scaleX = buf.readFloat();
+                float scaleY = buf.readFloat();
+                if (scaleX < 0.0625f || scaleX > 16f || scaleY < 0.0625f || scaleY > 16f) {
+                    throw new IllegalArgumentException("Invalid scale value: " + scaleX + " " + scaleY);
+                }
+                screen.fill = fill;
+                screen.scaleX = scaleX;
+                screen.scaleY = scaleY;
+                if (area.hasPlayer()) {
+                    byte[] data = setScale(screen, fill, scaleX, scaleY);
+                    PlayerManager pm = Objects.requireNonNull(player.getServer()).getPlayerManager();
+                    area.forEachPlayer(p -> sendTo(pm.getPlayer(p), data));
+                }
+            }
             default -> player.networkHandler.disconnect(Text.of("Unknown packet type: " + type));
         }
         if (buf.readableBytes() > 0) {
@@ -402,6 +422,16 @@ public class ServerPacketHandler {
         ByteBufUtils.writeString(buf, key);
         buf.writeInt(value);
         buf.writeBoolean(remove);
+        return toByteArray(buf);
+    }
+
+    public static byte[] setScale(VideoScreen screen, boolean fill, float scaleX, float scaleY) {
+        ByteBuf buf = create(SET_SCALE);
+        writeString(buf, screen.area.name);
+        writeString(buf, screen.name);
+        buf.writeBoolean(fill);
+        buf.writeFloat(scaleX);
+        buf.writeFloat(scaleY);
         return toByteArray(buf);
     }
 }

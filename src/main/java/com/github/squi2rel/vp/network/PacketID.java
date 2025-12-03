@@ -24,7 +24,8 @@ public class PacketID {
     SLICE = 14,
     OPEN_MENU = 15,
     SET_META = 16,
-    SET_CUSTOM_META = 17;
+    SET_CUSTOM_META = 17,
+    SET_SCALE = 18;
 
     public enum Action {
         MUTE("静音", i -> (i >>> 1) == 0, (v, i) -> v.meta.put("mute", i)),

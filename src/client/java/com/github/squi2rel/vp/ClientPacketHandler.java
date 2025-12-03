@@ -168,6 +168,12 @@ public class ClientPacketHandler {
                 }
                 screen.metaChanged();
             }
+            case SET_SCALE -> {
+                ClientVideoScreen screen = areas.get(readName(buf)).getScreen(readName(buf));
+                screen.fill = buf.readBoolean();
+                screen.scaleX = buf.readFloat();
+                screen.scaleY = buf.readFloat();
+            }
             default -> LOGGER.warn("Unknown packet type: {}", type);
         }
         if (buf.readableBytes() > 0) {
@@ -286,5 +292,9 @@ public class ClientPacketHandler {
 
     public static void setCustomMeta(VideoScreen screen, String key, int value, boolean remove) {
         send(ServerPacketHandler.setCustomMeta(screen, key, value, remove));
+    }
+
+    public static void setScale(VideoScreen screen, boolean fill, float scaleX, float scaleY) {
+        send(ServerPacketHandler.setScale(screen, fill, scaleX, scaleY));
     }
 }
