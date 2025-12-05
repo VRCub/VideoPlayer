@@ -1,21 +1,17 @@
 package com.github.squi2rel.vp.vivecraft;
 
-import com.github.squi2rel.vp.VideoPlayerClient;
 import org.joml.Matrix4f;
+import org.vivecraft.api.client.VRRenderingAPI;
+import org.vivecraft.api.client.data.RenderPass;
 import org.vivecraft.client_vr.ClientDataHolderVR;
 import org.vivecraft.client_vr.VRState;
 
 class VivecraftImpl {
     private static final ClientDataHolderVR DATA_HOLDER = ClientDataHolderVR.getInstance();
-    private static Object renderPassObj;
+    private static final VRRenderingAPI RAPI = VRRenderingAPI.instance();
 
     static boolean isRightEye() {
-        if (renderPassObj == null) {
-            renderPassObj = VideoPlayerClient.getEnumValue("RIGHT",
-                    "org.vivecraft.api.client.data.RenderPass",
-                    "org.vivecraft.client_vr.render.RenderPass");
-        }
-        return DATA_HOLDER.currentPass == renderPassObj;
+        return RAPI.getCurrentRenderPass() == RenderPass.RIGHT;
     }
 
     static boolean isVRActive() {
@@ -23,6 +19,6 @@ class VivecraftImpl {
     }
 
     static Matrix4f getRotation() {
-        return DATA_HOLDER.vrPlayer.getVRDataWorld().getEye(DATA_HOLDER.currentPass).getMatrix();
+        return DATA_HOLDER.vrPlayer.getVRDataWorld().getEye(RAPI.getCurrentRenderPass()).getMatrix();
     }
 }
