@@ -21,7 +21,7 @@ public class PacketID {
     SKIP_PERCENT = 11,
     EXECUTE = 12,
     IDLE_PLAY = 13,
-    SLICE = 14,
+    SET_UV = 14,
     OPEN_MENU = 15,
     SET_META = 16,
     SET_CUSTOM_META = 17,

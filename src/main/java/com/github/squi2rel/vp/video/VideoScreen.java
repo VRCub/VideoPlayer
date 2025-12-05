@@ -30,7 +30,7 @@ public class VideoScreen {
     public float scaleX = 1, scaleY = 1;
     public String source;
     public float skipPercent = 0.5f;
-    public Map<String, Integer> meta = new HashMap<>();
+    public Map<String, Integer> meta;
     public transient ArrayDeque<VideoInfo> infos = new ArrayDeque<>();
     private transient IVideoListener now;
     private transient CompletableFuture<IVideoListener> nextTask;
@@ -73,9 +73,15 @@ public class VideoScreen {
     }
 
     public void initServer() {
-        skipped = new HashSet<>();
         infos = new ArrayDeque<>();
+        skipped = new HashSet<>();
+        if (meta == null) meta = new HashMap<>();
         lock = new ReentrantLock();
+        if (scaleX == 0 || scaleY == 0) {
+            fill = true;
+            scaleX = 1;
+            scaleY = 1;
+        }
         playNext();
     }
 

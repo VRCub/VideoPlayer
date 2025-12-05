@@ -342,7 +342,7 @@ public class VideoPlayerClient implements ClientModInitializer {
                                     float v1 = s.getArgument("v1", Float.class);
                                     float u2 = s.getArgument("u2", Float.class);
                                     float v2 = s.getArgument("v2", Float.class);
-                                    ClientPacketHandler.slice(currentLooking, u1, v1, u2, v2);
+                                    ClientPacketHandler.setUV(currentLooking, u1, v1, u2, v2);
                                     return 1;
                                 }))))))
                 .then(ClientCommandManager.literal("stop")
@@ -684,22 +684,5 @@ public class VideoPlayerClient implements ClientModInitializer {
                 throw new RuntimeException(e);
             }
         }
-    }
-
-    public static Object getEnumValue(String constantName, String... paths) {
-        for (String path : paths) {
-            try {
-                Class<?> clazz = Class.forName(path);
-                if (clazz.isEnum()) {
-                    @SuppressWarnings({"unchecked", "rawtypes"})
-                    Object enumValue = Enum.valueOf((Class<Enum>) clazz.asSubclass(Enum.class), constantName);
-                    return enumValue;
-                }
-            } catch (ClassNotFoundException ignored) {
-            } catch (IllegalArgumentException e) {
-                System.err.println("Enum found, but constant not present: " + constantName);
-            }
-        }
-        throw new RuntimeException("Enum constant not found in any known path: " + constantName);
     }
 }

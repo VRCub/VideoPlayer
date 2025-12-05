@@ -142,7 +142,7 @@ public class ServerPacketHandler {
                 if (screen == null) return;
                 readString(buf, 1024);
             }
-            case SLICE -> {
+            case SET_UV -> {
                 // TODO check permission
                 VideoArea area = getArea(player, readName(buf));
                 if (area == null) return;
@@ -150,7 +150,7 @@ public class ServerPacketHandler {
                 if (screen == null) return;
                 readUV(buf, screen);
                 if (area.hasPlayer()) {
-                    byte[] data = slice(screen, screen.u1, screen.v1, screen.u2, screen.v2);
+                    byte[] data = setUV(screen, screen.u1, screen.v1, screen.u2, screen.v2);
                     PlayerManager pm = Objects.requireNonNull(player.getServer()).getPlayerManager();
                     area.forEachPlayer(p -> sendTo(pm.getPlayer(p), data));
                 }
@@ -298,6 +298,18 @@ public class ServerPacketHandler {
         buf.writeFloat(screen.v2);
     }
 
+    public static void readScale(ByteBuf buf, VideoScreen screen) {
+        screen.fill = buf.readBoolean();
+        screen.scaleX = buf.readFloat();
+        screen.scaleY = buf.readFloat();
+    }
+
+    public static void writeScale(ByteBuf buf, VideoScreen screen) {
+        buf.writeBoolean(screen.fill);
+        buf.writeFloat(screen.scaleX);
+        buf.writeFloat(screen.scaleY);
+    }
+
     public static void sendTo(ServerPlayerEntity player, byte[] bytes) {
         ServerPlayNetworking.send(player, new VideoPayload(bytes));
     }
@@ -348,6 +360,7 @@ public class ServerPacketHandler {
         for (VideoScreen screen : screens) {
             VideoScreen.write(buf, screen);
             writeUV(buf, screen);
+            writeScale(buf, screen);
             screen.writeMeta(buf);
         }
         return toByteArray(buf);
@@ -407,8 +420,8 @@ public class ServerPacketHandler {
         return toByteArray(buf);
     }
 
-    public static byte[] slice(VideoScreen screen, float u1, float v1, float u2, float v2) {
-        ByteBuf buf = create(SLICE);
+    public static byte[] setUV(VideoScreen screen, float u1, float v1, float u2, float v2) {
+        ByteBuf buf = create(SET_UV);
         writeString(buf, screen.area.name);
         writeString(buf, screen.name);
         buf.writeFloat(u1);

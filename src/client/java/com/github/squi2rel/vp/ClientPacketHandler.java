@@ -93,6 +93,7 @@ public class ClientPacketHandler {
                 for (int i = 0; i < size; i++) {
                     ClientVideoScreen screen = ClientVideoScreen.from(VideoScreen.read(buf, area));
                     ServerPacketHandler.readUV(buf, screen);
+                    ServerPacketHandler.readScale(buf, screen);
                     screen.readMeta(buf);
                     area.addScreen(screen);
                 }
@@ -140,7 +141,7 @@ public class ClientPacketHandler {
                     }
                 }
             }
-            case SLICE -> {
+            case SET_UV -> {
                 ClientVideoScreen screen = areas.get(readName(buf)).getScreen(readName(buf));
                 if (screen == null) return;
                 ServerPacketHandler.readUV(buf, screen);
@@ -170,9 +171,8 @@ public class ClientPacketHandler {
             }
             case SET_SCALE -> {
                 ClientVideoScreen screen = areas.get(readName(buf)).getScreen(readName(buf));
-                screen.fill = buf.readBoolean();
-                screen.scaleX = buf.readFloat();
-                screen.scaleY = buf.readFloat();
+                if (screen == null) return;
+                ServerPacketHandler.readScale(buf, screen);
             }
             default -> LOGGER.warn("Unknown packet type: {}", type);
         }
@@ -275,8 +275,8 @@ public class ClientPacketHandler {
         send(toByteArray(buf));
     }
     
-    public static void slice(VideoScreen screen, float u1, float v1, float u2, float v2) {
-        send(ServerPacketHandler.slice(screen, u1, v1, u2, v2));
+    public static void setUV(VideoScreen screen, float u1, float v1, float u2, float v2) {
+        send(ServerPacketHandler.setUV(screen, u1, v1, u2, v2));
     }
 
     public static void openMenu(VideoScreen screen) {
