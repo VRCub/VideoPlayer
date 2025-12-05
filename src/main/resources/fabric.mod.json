@@ -35,5 +35,9 @@
 		"fabric-api": "*"
 	},
 	"suggests": {
+		"vivecraft": ">=1.3.0"
+	},
+	"breaks": {
+		"vivecraft": "<1.3.0"
 	}
 }
