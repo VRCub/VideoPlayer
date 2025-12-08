@@ -31,7 +31,7 @@ public class ScreenRenderer {
             true,
             RenderLayer.MultiPhaseParameters.builder()
                     .program(new RenderPhase.ShaderProgram(ShaderProgramKeys.POSITION_TEX_COLOR))
-                    .depthTest(RenderPhase.ALWAYS_DEPTH_TEST)
+                    .depthTest(RenderPhase.LEQUAL_DEPTH_TEST)
                     .texture(new RenderPhase.TextureBase(() -> RenderSystem.setShaderTexture(0, triangleId), () -> {}))
                     .cull(RenderPhase.DISABLE_CULLING)
                     .build(true)
