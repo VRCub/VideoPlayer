@@ -78,7 +78,7 @@ public class VideoScreen {
         if (meta == null) meta = new HashMap<>();
         lock = new ReentrantLock();
         if (scaleX == 0 || scaleY == 0) {
-            fill = true;
+            fill = false;
             scaleX = 1;
             scaleY = 1;
         }
