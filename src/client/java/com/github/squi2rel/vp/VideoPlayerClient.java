@@ -423,31 +423,26 @@ public class VideoPlayerClient implements ClientModInitializer {
                                                         })))
                                 )))
                 .then(ClientCommandManager.literal("scale")
-                        .then(ClientCommandManager.argument("area", StringArgumentType.string()).suggests(SUGGEST_AREAS)
-                                .then(ClientCommandManager.argument("screen", StringArgumentType.string()).suggests(SUGGEST_SCREENS)
-                                        .then(ClientCommandManager.literal("stretch")
+                        .then(ClientCommandManager.literal("stretch")
+                                .executes(s -> {
+                                    if (checkInvalidLooking(s)) return 0;
+                                    ClientPacketHandler.setScale(currentLooking, true, 1, 1);
+                                    return 1;
+                                }))
+                        .then(ClientCommandManager.literal("auto")
+                                .executes(s -> {
+                                    if (checkInvalidLooking(s)) return 0;
+                                    ClientPacketHandler.setScale(currentLooking, false, 1, 1);
+                                    return 1;
+                                }))
+                        .then(ClientCommandManager.literal("set")
+                                .then(ClientCommandManager.argument("scaleX", FloatArgumentType.floatArg(0.0625f, 16f))
+                                        .then(ClientCommandManager.argument("scaleY", FloatArgumentType.floatArg(0.0625f, 16f))
                                                 .executes(s -> {
-                                                    ClientVideoScreen screen = getScreen(s);
-                                                    if (screen == null) return 0;
-                                                    ClientPacketHandler.setScale(screen, true, 1, 1);
+                                                    if (checkInvalidLooking(s)) return 0;
+                                                    ClientPacketHandler.setScale(currentLooking, false, s.getArgument("scaleX", Float.class), s.getArgument("scaleY", Float.class));
                                                     return 1;
-                                                }))
-                                        .then(ClientCommandManager.literal("auto")
-                                                .executes(s -> {
-                                                    ClientVideoScreen screen = getScreen(s);
-                                                    if (screen == null) return 0;
-                                                    ClientPacketHandler.setScale(screen, false, 1, 1);
-                                                    return 1;
-                                                }))
-                                        .then(ClientCommandManager.literal("set")
-                                                .then(ClientCommandManager.argument("scaleX", FloatArgumentType.floatArg(0.0625f, 16f))
-                                                        .then(ClientCommandManager.argument("scaleY", FloatArgumentType.floatArg(0.0625f, 16f))
-                                                                .executes(s -> {
-                                                                    ClientVideoScreen screen = getScreen(s);
-                                                                    if (screen == null) return 0;
-                                                                    ClientPacketHandler.setScale(screen, false, s.getArgument("scaleX", Float.class), s.getArgument("scaleY", Float.class));
-                                                                    return 1;
-                                                                })))))))
+                                                })))))
         ));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.player == null || client.world == null || client.currentScreen != null || currentLooking == null) return;
