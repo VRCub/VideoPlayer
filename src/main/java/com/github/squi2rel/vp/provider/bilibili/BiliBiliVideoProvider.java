@@ -18,8 +18,8 @@ import java.util.regex.Pattern;
 public class BiliBiliVideoProvider extends BiliBiliProvider {
     public static final String FETCH_URL = "https://api.bilibili.com/x/web-interface/view?bvid=%s";
     public static final String PLAY_URL = "https://api.bilibili.com/x/player/playurl?bvid=%s&cid=%s&qn=80&platform=html5";
-    public static final Pattern REGEX = Pattern.compile("(?<=^|/)(BV[0-9A-Za-z]{10})(?:\\?p=(\\d+))?");
-    private static final Cache<String, VideoCache> CACHE = CacheBuilder.newBuilder().expireAfterAccess(10, TimeUnit.MINUTES).maximumSize(1024).build();
+    public static final Pattern REGEX = Pattern.compile("(?<=^|/)(BV[0-9A-Za-z]{10})/?(?:\\?[^#]*?p=(\\d+))?");
+    private static final Cache<String, VideoCache> CACHE = CacheBuilder.newBuilder().expireAfterWrite(10, TimeUnit.MINUTES).maximumSize(1024).build();
 
     @Override
     public @Nullable CompletableFuture<VideoInfo> from(String str, IProviderSource source) {
@@ -30,7 +30,7 @@ public class BiliBiliVideoProvider extends BiliBiliProvider {
         String key = bvid + "?p=" + p;
         VideoCache cache = CACHE.getIfPresent(key);
         if (cache != null && System.currentTimeMillis() < cache.expireTime) {
-            return CompletableFuture.completedFuture(new VideoInfo(source.name(), cache.title, cache.url, str, cache.expireTime, true, VLC_PARAMS));
+            return CompletableFuture.completedFuture(new VideoInfo(source.name(), cache.title, cache.url, key, cache.expireTime, true, VLC_PARAMS));
         }
         return CompletableFuture.supplyAsync(() -> {
             try (HttpClient client = HttpClient.newHttpClient()) {
@@ -54,7 +54,7 @@ public class BiliBiliVideoProvider extends BiliBiliProvider {
                 String url = root.getAsJsonObject("data").getAsJsonArray("durl").get(0).getAsJsonObject().get("url").getAsString();
                 long expire = System.currentTimeMillis() + 1000 * 60 * 60 * 2;
                 CACHE.put(key, new VideoCache(meta.title(), url, expire));
-                return new VideoInfo(source.name(), meta.title(), url, str, expire, true, VLC_PARAMS);
+                return new VideoInfo(source.name(), meta.title(), url, key, expire, true, VLC_PARAMS);
             } catch (Exception e) {
                 source.reply(e.toString());
                 return null;
