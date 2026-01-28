@@ -6,9 +6,13 @@ import uk.co.caprica.vlcj.player.base.MediaPlayer;
 import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 public class StreamListener implements IVideoListener {
+    public static final ExecutorService releaseExecutor = Executors.newCachedThreadPool();
+
     private static final ConcurrentHashMap<MediaPlayer, StreamListener> references = new ConcurrentHashMap<>();
     public static MediaPlayerFactory factory;
     private MediaPlayer player;
@@ -48,7 +52,7 @@ public class StreamListener implements IVideoListener {
                 listener.player = null;
                 mediaPlayer.submit(() -> {
                     mediaPlayer.controls().stop();
-                    mediaPlayer.release();
+                    releaseExecutor.submit(mediaPlayer::release);
                 });
             }
         }
@@ -63,32 +67,11 @@ public class StreamListener implements IVideoListener {
             listener.player = null;
             listener.stopped.run();
         }
-        mediaPlayer.submit(mediaPlayer::release);
+        releaseExecutor.submit(mediaPlayer::release);
     }
 
     public StreamListener(VideoInfo info) {
         this.info = info;
-        player = factory.mediaPlayers().newMediaPlayer();
-        runAsync(() -> {
-            try {
-                Thread.sleep(10000);
-                if (isPlaying()) return;
-                MediaPlayer p = player;
-                synchronized (this) {
-                    if (player == null) return;
-                    references.remove(p);
-                    player = null;
-                    timeout.run();
-                    stopped.run();
-                }
-                p.submit(() -> {
-                    p.controls().stop();
-                    p.release();
-                });
-            } catch (Exception ignored) {
-            }
-        });
-        player.events().addMediaPlayerEventListener(callback);
     }
 
     public static boolean accept(VideoInfo info) {
@@ -127,6 +110,27 @@ public class StreamListener implements IVideoListener {
 
     @Override
     public void listen() {
+        player = factory.mediaPlayers().newMediaPlayer();
+        runAsync(() -> {
+            try {
+                Thread.sleep(10000);
+                if (isPlaying()) return;
+                MediaPlayer p = player;
+                synchronized (this) {
+                    if (player == null) return;
+                    references.remove(p);
+                    player = null;
+                    timeout.run();
+                    stopped.run();
+                }
+                p.submit(() -> {
+                    p.controls().stop();
+                    releaseExecutor.submit(p::release);
+                });
+            } catch (Exception ignored) {
+            }
+        });
+        player.events().addMediaPlayerEventListener(callback);
         references.put(player, this);
         player.media().play(info.path().replace("rtspt://", "rtsp://"), info.params());
     }
@@ -141,7 +145,7 @@ public class StreamListener implements IVideoListener {
         }
         p.submit(() -> {
             p.controls().stop();
-            p.release();
+            releaseExecutor.submit(p::release);
         });
     }
 

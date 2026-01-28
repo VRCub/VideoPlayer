@@ -95,7 +95,7 @@ public class VlcDecoder {
 
     public void cleanup() {
         stop();
-        mediaPlayer.submit(mediaPlayer::release);
+        StreamListener.releaseExecutor.submit(mediaPlayer::release);
     }
 
     public void stop() {
