@@ -52,13 +52,13 @@ public class DataHolder {
                         ServerPacketHandler.sendTo(player, ServerPacketHandler.createScreen(area.screens));
                         ServerPacketHandler.sendTo(player, ServerPacketHandler.loadArea(area));
                         ServerPacketHandler.sendTo(player, ServerPacketHandler.updatePlaylist(area.screens));
-                        player.sendMessage(Text.literal("进入观影区 " + area.name).formatted(Formatting.DARK_AQUA));
+                        player.sendMessage(Text.literal("进入观影区 " + area.name).formatted(Formatting.DARK_AQUA), true);
                     }
                 } else {
                     if (area.removePlayer(player.getUuid())) {
                         ServerPacketHandler.sendTo(player, ServerPacketHandler.unloadArea(area));
                         ServerPacketHandler.sendTo(player, ServerPacketHandler.removeArea(area));
-                        player.sendMessage(Text.literal("离开观影区 " + area.name).formatted(Formatting.DARK_AQUA));
+                        player.sendMessage(Text.literal("离开观影区 " + area.name).formatted(Formatting.DARK_AQUA), true);
                     }
                 }
             }

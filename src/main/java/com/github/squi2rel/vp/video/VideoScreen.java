@@ -223,6 +223,10 @@ public class VideoScreen {
         return infos.peek();
     }
 
+    public IVideoListener getListener() {
+        return now;
+    }
+
     public static VideoScreen read(ByteBuf buf, VideoArea area) {
         return new VideoScreen(
                 area,

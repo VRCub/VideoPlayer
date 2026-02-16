@@ -174,6 +174,12 @@ public class ClientPacketHandler {
                 if (screen == null) return;
                 ServerPacketHandler.readScale(buf, screen);
             }
+            case AUTO_SYNC -> {
+                long sysTime = System.currentTimeMillis();
+                ClientVideoScreen screen = areas.get(readName(buf)).getScreen(readName(buf));
+                if (screen == null) return;
+                screen.autoSync((int) (sysTime - buf.readLong()), buf.readLong());
+            }
             default -> LOGGER.warn("Unknown packet type: {}", type);
         }
         if (buf.readableBytes() > 0) {
@@ -296,5 +302,13 @@ public class ClientPacketHandler {
 
     public static void setScale(VideoScreen screen, boolean fill, float scaleX, float scaleY) {
         send(ServerPacketHandler.setScale(screen, fill, scaleX, scaleY));
+    }
+
+    public static void autoSync(VideoScreen screen, long clientTime) {
+        ByteBuf buf = create(AUTO_SYNC);
+        writeString(buf, screen.area.name);
+        writeString(buf, screen.name);
+        buf.writeLong(clientTime);
+        send(toByteArray(buf));
     }
 }

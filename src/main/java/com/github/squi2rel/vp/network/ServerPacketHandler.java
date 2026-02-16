@@ -4,6 +4,7 @@ import com.github.squi2rel.vp.ServerConfig;
 import com.github.squi2rel.vp.provider.PlayerProviderSource;
 import com.github.squi2rel.vp.provider.VideoInfo;
 import com.github.squi2rel.vp.provider.VideoProviders;
+import com.github.squi2rel.vp.video.IVideoListener;
 import com.github.squi2rel.vp.video.VideoArea;
 import com.github.squi2rel.vp.DataHolder;
 import com.github.squi2rel.vp.video.VideoScreen;
@@ -223,6 +224,18 @@ public class ServerPacketHandler {
                     PlayerManager pm = Objects.requireNonNull(player.getServer()).getPlayerManager();
                     area.forEachPlayer(p -> sendTo(pm.getPlayer(p), data));
                 }
+            }
+            case AUTO_SYNC -> {
+                VideoArea area = getArea(player, readName(buf));
+                if (area == null) return;
+                VideoScreen screen = area.getScreen(readName(buf));
+                if (screen == null) return;
+                long clientTime = buf.readLong();
+                IVideoListener listener = screen.getListener();
+                if (listener == null) return;
+                long progress = listener.getProgress();
+                if (progress <= 0) return;
+                sendTo(player, autoSync(screen, clientTime, progress));
             }
             default -> player.networkHandler.disconnect(Text.of("Unknown packet type: " + type));
         }
@@ -457,6 +470,15 @@ public class ServerPacketHandler {
         buf.writeBoolean(fill);
         buf.writeFloat(scaleX);
         buf.writeFloat(scaleY);
+        return toByteArray(buf);
+    }
+
+    public static byte[] autoSync(VideoScreen screen, long clientTime, long progress) {
+        ByteBuf buf = create(AUTO_SYNC);
+        writeString(buf, screen.area.name);
+        writeString(buf, screen.name);
+        buf.writeLong(clientTime);
+        buf.writeLong(progress);
         return toByteArray(buf);
     }
 }

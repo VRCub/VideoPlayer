@@ -29,6 +29,8 @@ public class CameraRenderer {
         height = framebuffer.textureHeight;
         framebuffer.beginWrite(true);
         rendering = true;
+        Entity oldEntity = client.getCameraEntity();
+        client.setCameraEntity(entity);
         CameraRenderer.aspect = aspect;
         Camera c = client.gameRenderer.getCamera();
         camera.update(client.world, entity, false, false, client.getRenderTickCounter().getTickDelta(true));
@@ -52,6 +54,7 @@ public class CameraRenderer {
         ((GameRendererAccessor) client.gameRenderer).setCamera(camera);
         client.worldRenderer.render(pool, client.getRenderTickCounter(), false, camera, client.gameRenderer, pos, proj);
         ((GameRendererAccessor) client.gameRenderer).setCamera(c);
+        client.setCameraEntity(oldEntity);
         renderSelf = false;
         rendering = false;
         client.gameRenderer.setRenderHand(true);

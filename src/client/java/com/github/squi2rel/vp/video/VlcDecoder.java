@@ -23,6 +23,9 @@ public class VlcDecoder {
     private final TextureRenderFormatCallback callback = new TextureRenderFormatCallback();
     private ByteBuffer buffer, glBuffer;
 
+    public long lastPlayTime;
+    public long lastPlayUpdateTime;
+
     private BiConsumer<Integer, Integer> sizeListener = (a, b) -> {};
     private Runnable playListener = () -> {}, finishListener = () -> {};
 
@@ -60,12 +63,18 @@ public class VlcDecoder {
             public void error(MediaPlayer mediaPlayer) {
                 mediaPlayer.submit(() -> mediaPlayer.controls().stop());
             }
+
+            @Override
+            public void timeChanged(MediaPlayer mediaPlayer, long newTime) {
+                lastPlayTime = newTime;
+                lastPlayUpdateTime = System.currentTimeMillis();
+            }
         });
     }
 
     public static void load() {
         VideoPlayerMain.LOGGER.info("loading library");
-        factory = new MediaPlayerFactory();
+        factory = new MediaPlayerFactory("--audio-filter=scaletempo");
         VideoPlayerMain.LOGGER.info("loaded library");
     }
 
@@ -86,6 +95,7 @@ public class VlcDecoder {
     }
 
     public void init(VideoInfo info) {
+        lastPlayTime = 0;
         mediaPlayer.media().play(info.path().replace("rtspt://", "rtsp://"), info.params());
     }
 
@@ -113,7 +123,7 @@ public class VlcDecoder {
     }
 
     public boolean isPaused() {
-        return mediaPlayer.status().isPlaying();
+        return !mediaPlayer.status().isPlaying();
     }
 
     public int getWidth() {
@@ -137,11 +147,19 @@ public class VlcDecoder {
     }
 
     public long getProgress() {
-        return mediaPlayer.status().time();
+        return lastPlayTime == 0 ? 0 : System.currentTimeMillis() - lastPlayUpdateTime + lastPlayTime;
     }
 
     public long getTotalProgress() {
         return mediaPlayer.status().length();
+    }
+
+    public void setRate(float rate) {
+        mediaPlayer.controls().setRate(rate);
+    }
+
+    public float getRate() {
+        return mediaPlayer.status().rate();
     }
 
     private class TextureRenderFormatCallback implements RenderCallback {

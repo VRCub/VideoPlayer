@@ -153,6 +153,14 @@ public class VideoPlayer implements IVideoPlayer, MetaListener {
         this.targetTime = targetTime;
     }
 
+    public void setRate(float rate) {
+        decoder.setRate(rate);
+    }
+
+    public float getRate() {
+        return decoder.getRate();
+    }
+
     @Override
     public synchronized void cleanup() {
         initialized = false;

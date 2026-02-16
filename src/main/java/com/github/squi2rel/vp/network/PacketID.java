@@ -25,13 +25,15 @@ public class PacketID {
     OPEN_MENU = 15,
     SET_META = 16,
     SET_CUSTOM_META = 17,
-    SET_SCALE = 18;
+    SET_SCALE = 18,
+    AUTO_SYNC = 19;
 
     public enum Action {
         MUTE("静音", i -> (i >>> 1) == 0, (v, i) -> v.meta.put("mute", i)),
         INTERACTABLE("可交互", i -> (i >>> 1) == 0, (v, i) -> v.meta.put("interactable", i)),
         ASPECT("宽高比", i -> Float.intBitsToFloat(i) >= 0.0625f && Float.intBitsToFloat(i) <= 16f, (v, i) -> v.meta.put("aspect", i)),
-        FOV("视场角", i -> i > 0 && i < 180, (v, i) -> v.meta.put("fov", i));
+        FOV("视场角", i -> i > 0 && i < 180, (v, i) -> v.meta.put("fov", i)),
+        AUTO_SYNC("自动同步", i -> (i >>> 1) == 0, (v, i) -> v.meta.put("autoSync", i));
 
         public static final Action[] VALUES = values();
 

@@ -22,6 +22,9 @@ public class StreamListener implements IVideoListener {
     private Runnable timeout = () -> {};
     private final VideoInfo info;
 
+    public long lastPlayTime;
+    public long lastPlayUpdateTime;
+
     private static final MediaPlayerEventAdapter callback = new MediaPlayerEventAdapter() {
         @Override
         public void playing(MediaPlayer mediaPlayer) {
@@ -56,6 +59,17 @@ public class StreamListener implements IVideoListener {
                 });
             }
         }
+
+        @Override
+        public void timeChanged(MediaPlayer mediaPlayer, long newTime) {
+            StreamListener listener = references.get(mediaPlayer);
+            if (listener == null) return;
+            synchronized (listener) {
+                if (listener.player == null) return;
+                listener.lastPlayTime = newTime;
+                listener.lastPlayUpdateTime = System.currentTimeMillis();
+            }
+        }
     };
 
     private static void finish(MediaPlayer mediaPlayer) {
@@ -80,7 +94,7 @@ public class StreamListener implements IVideoListener {
 
     @Override
     public long getProgress() {
-        return player.status().time();
+        return player == null ? -1 : lastPlayTime == 0 ? 0 : System.currentTimeMillis() - lastPlayUpdateTime + lastPlayTime;
     }
 
     @Override
@@ -132,6 +146,7 @@ public class StreamListener implements IVideoListener {
         });
         player.events().addMediaPlayerEventListener(callback);
         references.put(player, this);
+        lastPlayTime = 0;
         player.media().play(info.path().replace("rtspt://", "rtsp://"), info.params());
     }
 
