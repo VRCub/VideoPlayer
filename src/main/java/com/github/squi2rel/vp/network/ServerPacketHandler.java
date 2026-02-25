@@ -230,6 +230,8 @@ public class ServerPacketHandler {
                 if (area == null) return;
                 VideoScreen screen = area.getScreen(readName(buf));
                 if (screen == null) return;
+                VideoInfo info = screen.currentPlaying();
+                if (info == null || !info.seekable()) return;
                 long clientTime = buf.readLong();
                 IVideoListener listener = screen.getListener();
                 if (listener == null) return;

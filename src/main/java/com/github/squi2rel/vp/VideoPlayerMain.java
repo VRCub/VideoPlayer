@@ -20,6 +20,8 @@ import net.minecraft.text.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -35,11 +37,15 @@ public class VideoPlayerMain implements ModInitializer {
     @SuppressWarnings("resource")
     @Override
     public void onInitialize() {
+        if (Files.exists(Path.of("/system/build.prop"))) {
+            LOGGER.warn("!!! Android Device !!! Crash may happen");
+            Android.load();
+        }
         try {
             StreamListener.load();
         } catch (Throwable e) {
             error = e;
-            VideoPlayerMain.LOGGER.error("Cannot load vlc library", e);
+            LOGGER.error("Cannot load vlc library", e);
             return;
         }
         VideoProviders.register();
